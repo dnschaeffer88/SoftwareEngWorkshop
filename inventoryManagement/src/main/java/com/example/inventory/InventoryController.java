@@ -36,20 +36,23 @@ public class InventoryController {
 	 */
 	@RequestMapping("/login")
 	@ResponseBody
-	public Boolean login(@RequestBody String payload) throws SQLException, ClassNotFoundException {
-
+	public Map<String, String> login(HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		HashMap<String, String> loginResp = new HashMap<String, String>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String username = jsonNode.get("username").asText();
 			String password = jsonNode.get("password").asText();
 			
 			Boolean authenticated = inventoryManagement.authenticateIntoApplication(username, password); 
-			return authenticated;
-			
+			loginResp.put("success", authenticated.toString());
+		return loginResp;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
+		return null;
 	}
 
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
@@ -117,9 +120,14 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/addPartsToStorage")
 	@ResponseBody
-	public Boolean addPartsToStorage(@RequestBody String payload) throws SQLException{
+	public Boolean addPartsToStorage(HttpServletResponse response, @RequestBody String payload) throws SQLException{
+		
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 
 		try {
+			//HashMap<String, String> addItemResp = new HashMap<String, String>();
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String username = jsonNode.get("username").asText();
 			String csrf = jsonNode.get("csrf").asText();
@@ -131,8 +139,8 @@ public class InventoryController {
 			int partNo = jsonNode.get("partNo").asInt();
 			int weight = jsonNode.get("weight").asInt();
 			
-			boolean response = inventoryManagement.addPartsToStorage(username, csrf, department, unit, type, hasWeight, serialNo, partNo, weight);
-			return response;
+			boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, department, unit, type, hasWeight, serialNo, partNo, weight);
+			return responseAdd;
 			
 		} catch (IOException e) {
 			e.printStackTrace();

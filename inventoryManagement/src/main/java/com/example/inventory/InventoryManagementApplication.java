@@ -377,10 +377,18 @@ public class InventoryManagementApplication {
 						String partNo = rs.getString("PartNo");
 						String serialNo = rs.getString("SerialNo");
 						int weight = rs.getInt("Weight");
+						String department = rs.getString("DepartmentID");
+						int hasWeight = rs.getInt("HasWeight");
+						int unitId = rs.getInt("BucketID");
 						
 						aRecord.setPartNo(partNo);
 						aRecord.setSerialNo(serialNo);
-						aRecord.setWeight(weight);
+						aRecord.setWeight(Integer.toString(weight));
+						aRecord.setDepartment(department);
+						aRecord.setHasWeight(Integer.toString(hasWeight));
+						aRecord.setUnit(Integer.toString(unitId));
+						
+						
 
 						itemRecords.add(aRecord);
 					}
