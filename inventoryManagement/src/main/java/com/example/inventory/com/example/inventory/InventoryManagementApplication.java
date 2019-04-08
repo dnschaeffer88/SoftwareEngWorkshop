@@ -439,13 +439,17 @@ public class InventoryManagementApplication {
 		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 		try {
 			con = DriverManager.getConnection(connectionUrl);
-			
+			int count = 0;
 			String deleteSql = "DELETE FROM dbo.Login where UserName = ? and Password = ? and Admin = ?";
 			ps = con.prepareStatement(deleteSql);
 			ps.setString(1, userName);
 			ps.setString(2, password);
 			ps.setString(3, admin);
-			ps.executeUpdate();
+			count = ps.executeUpdate();
+			if (count == 0) 
+				return false;  //Return false if parameters do not match values in database
+			else
+				return true;   //Return true if parameters do match values in database
 		} 
 		catch (SQLException e) {
 			e.printStackTrace();
@@ -459,6 +463,6 @@ public class InventoryManagementApplication {
 				ps.close();
 			}
 		}
-		return true;
+		//return true;
 	}
 }
