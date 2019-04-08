@@ -163,4 +163,45 @@ public class InventoryController {
 		return unitcall;
 	}
 	
+	
+	//test with: curl -H "Content-Type: application/json" --data '{"UserName":"bchoi","Password":"yo", "Admin":"test"}' @body.json http://localhost:8080/addUser
+	@RequestMapping(value = "/addUser")
+	@ResponseBody
+	public Boolean addUser(@RequestBody String payload) throws SQLException {
+		
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String UserName = jsonNode.get("UserName").asText();
+			String Password = jsonNode.get("Password").asText();
+			String Admin = jsonNode.get("Admin").asText();
+			
+			boolean response = inventoryManagement.addUser(UserName, Password, Admin);
+			return response;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	//test with: curl -H "Content-Type: application/json" --data '{"UserName":"bchoi","Password":"yo", "Admin":"test"}' @body.json http://localhost:8080/removeUser
+	@RequestMapping(value = "/removeUser")
+	@ResponseBody
+	public Boolean removeUser(@RequestBody String payload) throws SQLException {
+		
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String UserName = jsonNode.get("UserName").asText();
+			String Password = jsonNode.get("Password").asText();
+			String Admin = jsonNode.get("Admin").asText();
+			
+			boolean response = inventoryManagement.removeUser(UserName, Password, Admin);
+			return response;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
 }

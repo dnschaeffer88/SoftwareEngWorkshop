@@ -240,12 +240,10 @@ public class InventoryManagementApplication {
 			ps.setInt(1, bucketIDconverted);
 			ps.setString(2, serialNumber);
 			ps.setString(3,  partNumber);
-		
-
 			rs = ps.executeQuery();
+			
 			if(rs.isBeforeFirst()) {
 				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
-				
 				ps2 = con.prepareStatement(sqlDelete);
 				ps2.setInt(1, bucketIDconverted);
 				ps2.setString(2,  serialNumber);
@@ -402,4 +400,65 @@ public class InventoryManagementApplication {
 		return unitObject;
 	}
 
+	
+	public boolean addUser(String UserName, String Password, String Admin) throws SQLException {
+		Connection con = null;
+		PreparedStatement ps = null;
+		//ResultSet rs = null;
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+			
+			String insertSql = "insert into dbo.Login(UserName, Password, Admin) " +
+					"VALUES(?, ?, ?)";
+			ps = con.prepareStatement(insertSql);
+			ps.setString(1, UserName);
+			ps.setString(2, Password);
+			ps.setString(3, Admin);
+			ps.executeUpdate();
+		} 
+		catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		} 
+		finally {
+			if(!con.isClosed()) {
+				con.close();
+			}
+			if(!ps.isClosed()) {
+				ps.close();
+			}
+		}
+		return true;
+	}
+
+	public boolean removeUser(String userName, String password, String admin) throws SQLException {
+		Connection con = null;
+		PreparedStatement ps = null;
+		//ResultSet rs = null;
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+			
+			String deleteSql = "DELETE FROM dbo.Login where UserName = ? and Password = ? and Admin = ?";
+			ps = con.prepareStatement(deleteSql);
+			ps.setString(1, userName);
+			ps.setString(2, password);
+			ps.setString(3, admin);
+			ps.executeUpdate();
+		} 
+		catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		} 
+		finally {
+			if(!con.isClosed()) {
+				con.close();
+			}
+			if(!ps.isClosed()) {
+				ps.close();
+			}
+		}
+		return true;
+	}
 }
