@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,7 @@ public class InventoryController {
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
+		RequestContextHolder.currentRequestAttributes().getSessionId();
 		HashMap<String, String> loginResp = new HashMap<String, String>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
@@ -151,21 +153,20 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/unit")
 	@ResponseBody
-	public Unit unitData(@RequestBody String payload) throws SQLException {
-		
-		Unit unitcall = null;
-		try {
-			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			int bucketID = jsonNode.get("BucketId").asInt();
+	public Map<String, String> unitData(HttpServletResponse response, @RequestBody String payload) throws SQLException, IOException {
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		HashMap<String, String> unitResp = new HashMap<String, String>();
+		JsonNode jsonNode = new ObjectMapper().readTree(payload);
+		int bucketID = jsonNode.get("UnitID").asInt();
+		//int bucketID = 1;
+		Unit unitcall = inventoryManagement.unitData(bucketID);
+		unitResp.put("success", "true");
+		unitResp.put("items", unitcall.getItems().toString());
+		return unitResp;
 
-			unitcall = inventoryManagement.unitData(bucketID);
-			return unitcall;
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return unitcall;
+		//return unitResp;
 	}
 	
 

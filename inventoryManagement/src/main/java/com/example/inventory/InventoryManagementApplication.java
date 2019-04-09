@@ -362,7 +362,8 @@ public class InventoryManagementApplication {
 			if (rsConfirm != null) {
 				unitObject.setHasWeight(true);
 			}else {
-				return unitObject;
+				unitObject.setHasWeight(false);
+				//return unitObject;
 			}
 			
 			List<Items> itemRecords = new ArrayList<Items>();
