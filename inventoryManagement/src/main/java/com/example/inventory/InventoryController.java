@@ -6,8 +6,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,7 +38,7 @@ public class InventoryController {
 	 */
 	@RequestMapping("/login")
 	@ResponseBody
-	public Map<String, String> login(HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
+	public Map<String, String> login(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
@@ -48,13 +49,46 @@ public class InventoryController {
 			String username = jsonNode.get("username").asText();
 			String password = jsonNode.get("password").asText();
 			
-			Boolean authenticated = inventoryManagement.authenticateIntoApplication(username, password); 
+			Boolean authenticated = inventoryManagement.authenticateIntoApplication(username, password);
+
+			// >>>>> CSRF CODE HERE
+			if (authenticated){
+				HttpSession session = request.getSession();
+				String token = UUID.randomUUID().toString();
+
+				session.setAttribute("csrf", token);
+				session.setAttribute("username", username);
+				System.out.println(session.getAttribute("csrf"));
+				loginResp.put("csrf", token);
+			}
+			// <<<<< CSRF CODE ENDS HERE
+			
 			loginResp.put("success", authenticated.toString());
-		return loginResp;
+
+			return loginResp;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+
+	@RequestMapping("/logout")
+	@ResponseBody
+	public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		RequestContextHolder.currentRequestAttributes().getSessionId();
+		HashMap<String, String> map = new HashMap<>();
+		try{
+			request.getSession().invalidate();
+			map.put("success", "true");
+		}catch(Exception e){
+			map.put("success", "false");
+		}
+
+		return map;
 	}
 
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
@@ -84,7 +118,7 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/removePartsFromStorage")
 	@ResponseBody 
-	public Boolean removePartsToStorage(@RequestBody String payload) throws SQLException {
+	public Boolean removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
 
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
@@ -210,6 +244,15 @@ public class InventoryController {
 			this.name = name;
 			this.units = units;
 		}
-}
+	}
+
+	// @RequestMapping(value = "/dummy")
+	// @ResponseBody
+	// public void dummy(HttpServletRequest request, HttpServletResponse response){
+	// 	response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+	// 	response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	// 	response.setHeader("Access-Control-Allow-Credentials", "true");
+	// 	System.out.println(request.getSession().getAttribute("csrf"));
+	// }
 
 }
