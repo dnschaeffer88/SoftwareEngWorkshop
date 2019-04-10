@@ -156,14 +156,14 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/addPartsToStorage")
 	@ResponseBody
-	public Boolean addPartsToStorage(HttpServletResponse response, @RequestBody String payload) throws SQLException{
+	public Map<String, String> addPartsToStorage(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException{
 		
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
 
 		try {
-			//HashMap<String, String> addItemResp = new HashMap<String, String>();
+			HashMap<String, String> addItemResp = new HashMap<String, String>();
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String username = jsonNode.get("username").asText();
 			String csrf = jsonNode.get("csrf").asText();
@@ -174,15 +174,24 @@ public class InventoryController {
 			int serialNo = jsonNode.get("serialNo").asInt();
 			int partNo = jsonNode.get("partNo").asInt();
 			int weight = jsonNode.get("weight").asInt();
+
+			HttpSession session = request.getSession();
+			if (session.getAttribute("username") != username){
+				addItemResp.put("success", "false");
+			}else if (session.getAttribute("csrf") != csrf){
+				addItemResp.put("success", "false");
+			}else{
+				Boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, department, unit, type, hasWeight, serialNo, partNo, weight);
+				addItemResp.put("success", responseAdd.toString());
+			}
 			
-			boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, department, unit, type, hasWeight, serialNo, partNo, weight);
-			return responseAdd;
+			return addItemResp;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return false;
+		return null;
 	}
 	
 	@RequestMapping(value = "/unit")
