@@ -13,22 +13,42 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class InventoryManagementApplication {
+	private static String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+
+	private static Connection con = null;
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
+		openConnection();
+	}
+
+	private static void openConnection() /*throws SQLException*/{
+		try{
+			con = DriverManager.getConnection(connectionUrl);
+		}catch(Exception e){
+			e.printStackTrace();;
+		}/*finally{
+			if (!con.isClosed()){
+				con.close();
+			}
+		}*/
 	}
 
 	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
 		boolean authenticated = false;
-		Connection con = null;
+		//Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 
 		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+				if (con.isClosed()) openConnection();
+			// <<<
 
 			String sql = "SELECT * FROM dbo.Login where UserName = ? and password = ?";
 			ps = con.prepareStatement(sql);
@@ -49,9 +69,9 @@ public class InventoryManagementApplication {
 			e.printStackTrace();
 			authenticated = false;
 		} finally {
-			if(!con.isClosed()) {
-				con.close();
-			}
+			// if(!con.isClosed()) {
+			// 	con.close();
+			// }
 
 			if(!rs.isClosed()) {
 				rs.close();
@@ -72,13 +92,18 @@ public class InventoryManagementApplication {
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
 
 		int bucketKey = 0;
-		Connection con = null;
+		// Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
+			
 			String sql = "SELECT max(BucketID) as bucketId FROM dbo.Buckets";
 			Statement state = con.createStatement();
 			rs = state.executeQuery(sql);
@@ -109,10 +134,7 @@ public class InventoryManagementApplication {
 			return false;
 		} 
 		finally {
-			if(!con.isClosed()) {
-				con.close();
-			}
-
+			
 			if(!rs.isClosed()) {
 				rs.close();
 			}
@@ -128,16 +150,20 @@ public class InventoryManagementApplication {
 
 	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
 		// TODO Auto-generated method stub
-		Connection con = null;
+		// Connection con = null;
 		PreparedStatement ps = null;
 		PreparedStatement psInsert = null;
 		ResultSet rs = null;
 		ResultSet rs2 = null;
 
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
 
 			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and Department = ? and Unit = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
 			ps = con.prepareStatement(sql);
@@ -196,9 +222,7 @@ public class InventoryManagementApplication {
 			//partLoaded = false;
 			return false;
 		} finally {
-			if(!con.isClosed() && con != null) {
-				con.close();
-			}
+			
 
 			if(!rs.isClosed() && rs != null) {
 				rs.close();
@@ -222,15 +246,19 @@ public class InventoryManagementApplication {
 
 	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
 		// TODO Auto-generated method stub
-		Connection con = null;
+		// Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		//Boolean partLoaded = false;
 		PreparedStatement ps2 = null;
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
 
 			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
 			ps = con.prepareStatement(sql);
@@ -256,9 +284,7 @@ public class InventoryManagementApplication {
 			//partLoaded = false;
 			return false;
 		} finally {
-			if(!con.isClosed()) {
-				con.close();
-			}
+		
 
 			if(!rs.isClosed()) {
 				rs.close();
@@ -278,15 +304,19 @@ public class InventoryManagementApplication {
 
 	public boolean setUpPartNumber(String partNumber, int trackByWeightConverted, double weightConverted) throws SQLException {
 		// TODO Auto-generated method stub
-		Connection con = null;
+		// Connection con = null;
 		PreparedStatement ps = null;
 		PreparedStatement psInsert = null;
 		ResultSet rs = null;
 
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
 
 			String sql = "SELECT * FROM dbo.PartNumbers where PartNumber = ? and TrackByWeight = ? and Weight = ?";
 			ps = con.prepareStatement(sql);
@@ -320,9 +350,7 @@ public class InventoryManagementApplication {
 			return false;
 
 		} finally {
-			if(!con.isClosed() && con != null) {
-				con.close();
-			}
+		
 
 			if(!rs.isClosed() && rs != null) {
 				rs.close();
@@ -344,15 +372,20 @@ public class InventoryManagementApplication {
 	public Unit unitData(int bucketID) throws SQLException{
 		
 		Unit unitObject = new Unit(false, null);
-		Connection con = null;
+		// Connection con = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		ResultSet rsConfirm = null;
 		//PreparedStatement ps = null;
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 		
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
+
 			stmt = con.createStatement();
 			//System.out.println(bucketID);
 			String sqlConfirm = "select * from dbo.Buckets where UnitOfMeasurement = 'pounds' AND BucketID = '$[bucketID]'";
@@ -400,9 +433,9 @@ public class InventoryManagementApplication {
 			
 		} catch (SQLException e) {
 		}finally {
-			if(!con.isClosed()) {
-				con.close();
-			}
+			// if(!con.isClosed()) {
+			// 	con.close();
+			// }
 		}
 
 		return unitObject;
@@ -410,17 +443,21 @@ public class InventoryManagementApplication {
 
 
 	public List<DashboardData> gatherDashboardData() throws SQLException {
-		Connection con = null;
+		// Connection con = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		PreparedStatement ps = null;
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 
 		List<DashboardData> dataList = new ArrayList<DashboardData>();
 
 		try {
-			con = DriverManager.getConnection(connectionUrl);
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
 
 			String sql = "select BucketID, DepartmentID, BucketName, Location, UnitOfMeasurement, MaxMeasurement from dbo.buckets";
 			stmt = con.createStatement();
@@ -475,9 +512,9 @@ public class InventoryManagementApplication {
 
 		}
 		finally {
-			if(!con.isClosed()) {
-				con.close();
-			}
+			// if(!con.isClosed()) {
+			// 	con.close();
+			// }
 		}
 		return dataList;
 	}
