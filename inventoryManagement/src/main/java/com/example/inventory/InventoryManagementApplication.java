@@ -70,7 +70,6 @@ public class InventoryManagementApplication {
 
 	public Boolean createDigitalStorageItem(String bucketName, String partNumbersAllowed, String department,
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
-		//Get next primary key to use for ID.
 
 		int bucketKey = 0;
 		Connection con = null;
