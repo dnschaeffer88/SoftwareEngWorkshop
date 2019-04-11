@@ -170,10 +170,16 @@ public class InventoryController {
 			String department = jsonNode.get("department").asText();
 			int unit = jsonNode.get("unit").asInt();
 			String type = jsonNode.get("type").asText();
-			int hasWeight = jsonNode.get("hasWeight").asInt();
+			int hasWeight = jsonNode.get("hasWeight").asInt(); // CHANGED TO BOOLEAN FROM INT -- SIAM
 			int serialNo = jsonNode.get("serialNo").asInt();
 			int partNo = jsonNode.get("partNo").asInt();
-			int weight = jsonNode.get("weight").asInt();
+			
+			// >>>>>> BEFORE
+			// int weight = jsonNode.get("weight").asInt();
+			// ======
+			int weight = 1;
+			if (hasWeight != 0) weight = jsonNode.get("weight").asInt();
+			// <<<<<<
 
 			HttpSession session = request.getSession();
 			if (session.getAttribute("username") != username){
