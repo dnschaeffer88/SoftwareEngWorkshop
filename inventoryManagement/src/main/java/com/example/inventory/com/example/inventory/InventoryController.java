@@ -2,6 +2,8 @@ package com.example.inventory;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.attoparser.config.ParseConfiguration;
@@ -165,23 +167,29 @@ public class InventoryController {
 	
 	
 	//test with: curl -H "Content-Type: application/json" --data '{"UserName":"bchoi","Password":"yo", "Admin":"test"}' @body.json http://localhost:8080/addUser
+	//test with: curl -H "Content-Type: application/json" --data '{"Email":"bchoi22@wustl.edu","Password":"yo", "Role":"admin", "FirstName":"Ben", "LastName":"Choi", "Department":"Test"}' @body.json http://localhost:8080/addUser
 	@RequestMapping(value = "/addUser")
 	@ResponseBody
-	public Boolean addUser(@RequestBody String payload) throws SQLException {
-		
+	public List<String> addUser(@RequestBody String payload) throws SQLException {
+		List<String> napa = new ArrayList<String>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			String UserName = jsonNode.get("UserName").asText();
+
 			String Password = jsonNode.get("Password").asText();
-			String Admin = jsonNode.get("Admin").asText();
+			String Email = jsonNode.get("Email").asText();
+			String Role = jsonNode.get("Role").asText();
+			String FirstName = jsonNode.get("FirstName").asText();
+			String LastName = jsonNode.get("LastName").asText();
+			String Department = jsonNode.get("Department").asText();
 			
-			boolean response = inventoryManagement.addUser(UserName, Password, Admin);
+			List<String> response = inventoryManagement.addUser(Email, FirstName, LastName, Password, Role, Department);
 			return response;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
+		//return false;
+		return napa;
 	}
 	
 	//test with: curl -H "Content-Type: application/json" --data '{"UserName":"bchoi","Password":"yo", "Admin":"test"}' @body.json http://localhost:8080/removeUser

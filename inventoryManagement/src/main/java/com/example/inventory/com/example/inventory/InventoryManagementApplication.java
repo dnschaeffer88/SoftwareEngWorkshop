@@ -366,8 +366,10 @@ public class InventoryManagementApplication {
 			}
 			
 			List<Items> itemRecords = new ArrayList<Items>();
+			
 			String sql = "select BucketID, SerialNo, PartNo, Weight from dbo.Items";
 			rs = stmt.executeQuery(sql);
+			//System.out.println(bucketID);
 			if(rs != null) {
 				while(rs.next()) {
 					//if (rs.getString("BucketID").contentEquals(bucketID)) {
@@ -387,6 +389,7 @@ public class InventoryManagementApplication {
 					//System.out.println("PartNo: " + rs.getString("PartNo") + " SerialNo: " + rs.getString("SerialNo") + " Weight: " + rs.getInt("Weight"));
 				}
 				unitObject.setItems(itemRecords);
+				System.out.println(unitObject);
 			}
 			return unitObject;
 			
@@ -401,22 +404,54 @@ public class InventoryManagementApplication {
 	}
 
 	
-	public boolean addUser(String UserName, String Password, String Admin) throws SQLException {
+	/*public boolean addUser(String Email, String FirstName, String LastName, String Password, String Role, String Department) throws SQLException {
 		Connection con = null;
 		PreparedStatement ps = null;
-		//ResultSet rs = null;
+		PreparedStatement psInsert = null;
+		String sqlInsert = null;
+		PreparedStatement ps2 = null;
+		ResultSet rs = null;
+		ResultSet rs2 = null;
 		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 		try {
 			con = DriverManager.getConnection(connectionUrl);
+			//String selectSql = "SELECT * FROM dbo.Login(Email, FirstName, LastName, Password, Role) " +
+				//	"VALUES(?, ?, ?, ?, ?)";
+			String selectSql = "SELECT * FROM dbo.Login where Email = ? and FirstName = ? and LastName = ? and Password = ? and Role = ?";
+			ps = con.prepareStatement(selectSql);
+			ps.setString(1, Email);
+			ps.setString(2, FirstName);
+			ps.setString(3, LastName);
+			ps.setString(4, Password);			
+			ps.setString(5, Role);
+			rs = ps.executeQuery();
+			System.out.println(rs);
 			
-			String insertSql = "insert into dbo.Login(UserName, Password, Admin) " +
-					"VALUES(?, ?, ?)";
-			ps = con.prepareStatement(insertSql);
-			ps.setString(1, UserName);
-			ps.setString(2, Password);
-			ps.setString(3, Admin);
-			ps.executeUpdate();
+			if(rs.isBeforeFirst()) {
+				System.out.println(rs.isBeforeFirst());
+				return false;
+			}else
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				System.out.println("yes!");
+				return true;
+
+			/*String selectSql2 = "select UserEmail, UserDepartment from dbo.DeptJunctionTable";
+			ps2 = con.prepareStatement(selectSql3);
+			ps2.setString(1, Department);
+			rs2 = ps2.executeQuery();
+			if(rs2.isBeforeFirst())
+				//while(rs.next()) {
+				return false;		
 		} 
+		
 		catch (SQLException e) {
 			e.printStackTrace();
 			return false;
@@ -429,9 +464,102 @@ public class InventoryManagementApplication {
 				ps.close();
 			}
 		}
-		return true;
-	}
+		//return true;
+	}*/
 
+	public List<String> addUser(String Email, String FirstName, String LastName, String Password, String Role, String Department) throws SQLException {
+		
+		List<String> depts = new ArrayList<String>();
+		Connection con = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		ResultSet rsQuery = null;
+		String sqlInsert = null;
+		PreparedStatement psInsert = null;
+		int recExists = 0;
+		String sql = null;
+		String userDept = null;
+		int deptExists = 0;
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+			stmt = con.createStatement();
+			String selectSql = "SELECT Email, FirstName, LastName, Password, Role FROM dbo.Login";
+			rsQuery = stmt.executeQuery(selectSql);
+			if (rsQuery != null) {
+				while(rsQuery.next()) {
+					if (rsQuery.getString("Email").contentEquals(Email))
+						recExists = 1;			
+				}
+			}else {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}
+			
+			if (recExists == 0) {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				
+				sqlInsert = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, Department);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}else{
+				sql = "select UserEmail, UserDepartment from dbo.UserDeptJunctionTable";
+				rs = stmt.executeQuery(sql);
+				if(rs != null) {
+					while(rs.next()) {
+						if (rs.getString("UserEmail").contentEquals(Email)) {
+							userDept = rs.getString("UserDepartment");
+							depts.add(userDept);
+							if (rs.getString("UserDepartment").contentEquals(Department)) {
+								deptExists = 1;
+							}
+						}
+						//System.out.println(rs.getString("UserDepartment"));
+					}
+					if (deptExists == 0) {
+						sql = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+						psInsert = con.prepareStatement(sql);
+						psInsert.setString(1, Email);
+						psInsert.setString(2, Department);
+						psInsert.executeUpdate();
+						depts.add(Department);
+					}
+					//System.out.println(depts);
+					return depts;
+				}
+			}
+		}catch (SQLException e) {
+		}finally {
+			if(!con.isClosed()) {
+				con.close();
+			}
+		}
+		return depts;		
+	}
+	
+	
 	public boolean removeUser(String userName, String password, String admin) throws SQLException {
 		Connection con = null;
 		PreparedStatement ps = null;
