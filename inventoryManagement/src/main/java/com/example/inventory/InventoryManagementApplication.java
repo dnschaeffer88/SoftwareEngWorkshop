@@ -466,10 +466,6 @@ public class InventoryManagementApplication {
 			return unitObject;
 			
 		} catch (SQLException e) {
-		}finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
 		}
 
 		return unitObject;

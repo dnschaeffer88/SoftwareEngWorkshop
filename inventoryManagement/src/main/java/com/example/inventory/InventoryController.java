@@ -4,6 +4,7 @@ import com.example.inventory.datamodels.Unit;
 import com.example.inventory.datamodels.Items;
 import com.example.inventory.datamodels.DashboardData;
 import com.example.inventory.datamodels.User;
+import com.example.inventory.datamodels.Department;
 
 
 
@@ -274,26 +275,11 @@ public class InventoryController {
 		}
 		return ret_list;
 	}
-	
-	private static class Department{
-		public String name;
-		public ArrayList<User> admin;
-		public ArrayList<User> regular;
-		public ArrayList<DashboardData> units;
 
-		public Department(String name, ArrayList<DashboardData> units){
-			this.name = name;
-			this.units = units;
-		}
+
+	private void setHeaders(HttpServletResponse response){
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 	}
-
-	// @RequestMapping(value = "/dummy")
-	// @ResponseBody
-	// public void dummy(HttpServletRequest request, HttpServletResponse response){
-	// 	response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-	// 	response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-	// 	response.setHeader("Access-Control-Allow-Credentials", "true");
-	// 	System.out.println(request.getSession().getAttribute("csrf"));
-	// }
-
 }
