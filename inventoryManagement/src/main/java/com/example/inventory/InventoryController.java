@@ -94,25 +94,37 @@ public class InventoryController {
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
 	@RequestMapping(value = "/createDigitalStorageItem")
 	@ResponseBody
-	public Boolean createDigitalStorageItem(@RequestBody String payload) throws SQLException {
-		
+	public Map<String, String> createDigitalStorageItem(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+		HashMap<String, String> map = new HashMap<>();
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
 		try {
-			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			String bucketName = jsonNode.get("bucketName").asText();
-			String partNumbersAllowed = jsonNode.get("partNumbersAllowed").asText();
-			String department = jsonNode.get("department").asText();
-			String unitOfMeasurement = jsonNode.get("unitOfMeasurement").asText();
-			int maxMeasurement = jsonNode.get("maxMeasurement").asInt();
-			String location = jsonNode.get("location").asText();
+// TODO
+//			if (checkUserPrivillege(request.getSession().getAttribute("username")) {
+				JsonNode jsonNode = new ObjectMapper().readTree(payload);
+				String bucketName = jsonNode.get("bucketName").asText();
+				String partNumbersAllowed = jsonNode.get("partNumbersAllowed").asText();
+				String department = jsonNode.get("department").asText();
+				String unitOfMeasurement = jsonNode.get("unitOfMeasurement").asText();
+				int maxMeasurement = jsonNode.get("maxMeasurement").asInt();
+				String location = jsonNode.get("location").asText();
+				
+				boolean flag = inventoryManagement.createDigitalStorageItem(bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
+				
+				if (flag == true) {
+					map.put("success", "true");
+				} else {
+					map.put("success", "false");
+				}
+//			}
 			
-			boolean response = inventoryManagement.createDigitalStorageItem(bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
-			return response;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return false;
+		return map;
 	}
 
 	
