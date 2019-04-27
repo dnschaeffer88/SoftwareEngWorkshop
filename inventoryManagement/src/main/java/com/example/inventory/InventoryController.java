@@ -1,5 +1,12 @@
 package com.example.inventory;
 
+import com.example.inventory.datamodels.Unit;
+import com.example.inventory.datamodels.Items;
+import com.example.inventory.datamodels.DashboardData;
+import com.example.inventory.datamodels.User;
+
+
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -91,6 +98,19 @@ public class InventoryController {
 		return map;
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+
+	
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
 	@RequestMapping(value = "/createDigitalStorageItem")
 	@ResponseBody
@@ -203,19 +223,25 @@ public class InventoryController {
 	@RequestMapping(value = "/unit")
 	@ResponseBody
 	public Map<String, String> unitData(HttpServletResponse response, @RequestBody String payload) throws SQLException, IOException {
+		System.out.println("fml");
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
 		HashMap<String, String> unitResp = new HashMap<String, String>();
 		JsonNode jsonNode = new ObjectMapper().readTree(payload);
-		int bucketID = jsonNode.get("UnitID").asInt();
+		System.out.println(jsonNode);
+		int bucketID = jsonNode.get("unitID").asInt();
 		//int bucketID = 1;
+		System.out.println("Got herer");
 		Unit unitcall = inventoryManagement.unitData(bucketID);
+		System.out.println("Got herer");
+		System.out.println(unitcall.getItems());
+		System.out.println("got here");
 		unitResp.put("success", "true");
 		unitResp.put("items", unitcall.getItems().toString());
+		System.out.println("got here");
 		return unitResp;
 
-		//return unitResp;
 	}
 	
 
@@ -223,8 +249,6 @@ public class InventoryController {
 	@RequestMapping(value = "/dashboard")
 	@ResponseBody
 	public List<Department> returnDashboard(HttpServletResponse response) throws SQLException {
-		
-		
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
@@ -253,6 +277,8 @@ public class InventoryController {
 	
 	private static class Department{
 		public String name;
+		public ArrayList<User> admin;
+		public ArrayList<User> regular;
 		public ArrayList<DashboardData> units;
 
 		public Department(String name, ArrayList<DashboardData> units){

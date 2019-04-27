@@ -1,5 +1,18 @@
 package com.example.inventory;
 
+import com.example.inventory.datamodels.Unit;
+import com.example.inventory.datamodels.Items;
+import com.example.inventory.datamodels.DashboardData;
+import com.google.api.core.ApiFuture;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -7,6 +20,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,10 +31,48 @@ public class InventoryManagementApplication {
 	private static String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 	private static Connection con = null;
+	private static Firestore db;
+	private static ApiFuture<DocumentSnapshot> af;
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
 		openConnection();
+
+
+		// Use a service account
+		try{
+			InputStream serviceAccount = new FileInputStream("pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+			FirebaseOptions options = new FirebaseOptions.Builder()
+				.setCredentials(credentials)
+				.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
+				.build();
+			FirebaseApp.initializeApp(options);
+
+			db = FirestoreClient.getFirestore();
+			getAllParts();
+		}catch(Exception e){
+			System.out.println("Initialization Failed");
+		}
+	}
+
+	private static void getAllParts(){
+		af = db.collection("parts").document("parts").get();
+	}
+
+	private static Set<String> parseAllParts(){
+		try{
+			DocumentSnapshot ds = af.get();
+			String[] res = ds.toObject(String[].class);
+			HashSet<String> hs = new HashSet<>();
+			for (String r: res){
+				hs.add(r);
+			}
+			return hs;
+		} catch(Exception e){
+			return null;
+		}
+		
 	}
 
 	private static void openConnection() /*throws SQLException*/{
@@ -27,28 +80,16 @@ public class InventoryManagementApplication {
 			con = DriverManager.getConnection(connectionUrl);
 		}catch(Exception e){
 			e.printStackTrace();;
-		}/*finally{
-			if (!con.isClosed()){
-				con.close();
-			}
-		}*/
+		}
 	}
 
 	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
 		boolean authenticated = false;
-		//Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-				if (con.isClosed()) openConnection();
-			// <<<
+			if (con.isClosed()) openConnection();
 
 			String sql = "SELECT * FROM dbo.Login where UserName = ? and password = ?";
 			ps = con.prepareStatement(sql);
@@ -58,9 +99,7 @@ public class InventoryManagementApplication {
 			rs = ps.executeQuery();
 			if(rs != null) {
 				while(rs.next()) {
-					//Test
 					authenticated = true;
-					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
 				}
 
 			} 
@@ -69,10 +108,7 @@ public class InventoryManagementApplication {
 			e.printStackTrace();
 			authenticated = false;
 		} finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
-
+		
 			if(!rs.isClosed()) {
 				rs.close();
 			}
@@ -83,8 +119,6 @@ public class InventoryManagementApplication {
 
 		}
 
-
-
 		return authenticated;
 	}
 
@@ -92,18 +126,37 @@ public class InventoryManagementApplication {
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
 		//Get next primary key to use for ID.
 
+		String[] parts = partNumbersAllowed.replaceAll(" ", "").split(",");
+		Set<String> acceptedParts = parseAllParts();
+
+		for (String part: parts){
+			if (!acceptedParts.contains(part)){
+				return false;
+			}
+			// boolean state = false;
+			// for (String p: acceptedParts){
+			// 	if (p == part){
+			// 		state = true;
+			// 		break;
+			// 	}
+			// }
+			// if (state) continue;
+			// return false;
+		}
+
+		DashboardData dd = new DashboardData(department, bucketName, 
+			location, unitOfMeasurement, maxMeasConverted, 0.0, null);
+
+		
+		db.collection("departments").document(department).collection("units").add(dd);
+
+
 		int bucketKey = 0;
-		// Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
 			if (con.isClosed()) openConnection();
-			// <<<
 			
 			String sql = "SELECT max(BucketID) as bucketId FROM dbo.Buckets";
 			Statement state = con.createStatement();
@@ -149,22 +202,15 @@ public class InventoryManagementApplication {
 	}
 
 
-	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
-		// TODO Auto-generated method stub
-		// Connection con = null;
+	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) 
+	throws SQLException {
 		PreparedStatement ps = null;
 		PreparedStatement psInsert = null;
 		ResultSet rs = null;
 		ResultSet rs2 = null;
 
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
 			if (con.isClosed()) openConnection();
-			// <<<
 
 			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and Department = ? and Unit = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
 			ps = con.prepareStatement(sql);
@@ -247,19 +293,13 @@ public class InventoryManagementApplication {
 
 	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
 		// TODO Auto-generated method stub
-		// Connection con = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		//Boolean partLoaded = false;
 		PreparedStatement ps2 = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
 			if (con.isClosed()) openConnection();
-			// <<<
 
 			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
 			ps = con.prepareStatement(sql);
@@ -304,20 +344,12 @@ public class InventoryManagementApplication {
 	}
 
 	public boolean setUpPartNumber(String partNumber, int trackByWeightConverted, double weightConverted) throws SQLException {
-		// TODO Auto-generated method stub
-		// Connection con = null;
 		PreparedStatement ps = null;
 		PreparedStatement psInsert = null;
 		ResultSet rs = null;
 
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
+		try {	
 			if (con.isClosed()) openConnection();
-			// <<<
 
 			String sql = "SELECT * FROM dbo.PartNumbers where PartNumber = ? and TrackByWeight = ? and Weight = ?";
 			ps = con.prepareStatement(sql);
@@ -370,27 +402,21 @@ public class InventoryManagementApplication {
 	}
 
 	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
-	public Unit unitData(int bucketID) throws SQLException{
+	public Unit unitData(Integer bucketID) throws SQLException{
 		
 		Unit unitObject = new Unit(false, null);
-		// Connection con = null;
-		Statement stmt = null;
 		ResultSet rs = null;
 		ResultSet rsConfirm = null;
-		//PreparedStatement ps = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 		
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
 			if (con.isClosed()) openConnection();
-			// <<<
 
-			stmt = con.createStatement();
-			//System.out.println(bucketID);
-			String sqlConfirm = "select * from dbo.Buckets where UnitOfMeasurement = 'pounds' AND BucketID = '$[bucketID]'";
-			rsConfirm = stmt.executeQuery(sqlConfirm);
+			String sqlConfirm = "select * from dbo.Buckets where UnitOfMeasurement = 'pounds' AND BucketID = ?"; //" UnitOfMeasurement = 'pounds' AND BucketID = '$[bucketID]'";
+			PreparedStatement ps = null;
+			ps = con.prepareStatement(sqlConfirm);
+			ps.setString(1, bucketID.toString());
+
+			rsConfirm = ps.executeQuery(); // CHANGED some parts 
 			
 			if (rsConfirm != null) {
 				unitObject.setHasWeight(true);
@@ -399,12 +425,18 @@ public class InventoryManagementApplication {
 				//return unitObject;
 			}
 			
+			Statement stmt = con.createStatement();
 			List<Items> itemRecords = new ArrayList<Items>();
 			String sql = "select BucketID, SerialNo, PartNo, Weight from dbo.Items";
+			System.out.println(bucketID);
+			System.out.println(unitObject);
 			rs = stmt.executeQuery(sql);
+			System.out.println(rs.getFetchSize());
+			
 			if(rs != null) {
 				while(rs.next()) {
 					//if (rs.getString("BucketID").contentEquals(bucketID)) {
+					System.out.println(1);
 					if (rs.getInt("BucketID") == bucketID) {
 						Items aRecord = new Items();	
 						
@@ -429,6 +461,7 @@ public class InventoryManagementApplication {
 					//System.out.println("PartNo: " + rs.getString("PartNo") + " SerialNo: " + rs.getString("SerialNo") + " Weight: " + rs.getInt("Weight"));
 				}
 				unitObject.setItems(itemRecords);
+				System.out.println(unitObject);
 			}
 			return unitObject;
 			
@@ -444,21 +477,14 @@ public class InventoryManagementApplication {
 
 
 	public List<DashboardData> gatherDashboardData() throws SQLException {
-		// Connection con = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		PreparedStatement ps = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 
 		List<DashboardData> dataList = new ArrayList<DashboardData>();
 
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
 
 			String sql = "select BucketID, DepartmentID, BucketName, Location, UnitOfMeasurement, MaxMeasurement from dbo.buckets";
 			stmt = con.createStatement();
