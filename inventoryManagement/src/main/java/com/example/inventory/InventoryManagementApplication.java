@@ -260,7 +260,7 @@ public class InventoryManagementApplication {
 			if (con.isClosed()) openConnection();
 			// <<<
 
-			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
+			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
 			ps = con.prepareStatement(sql);
 			ps.setInt(1, bucketIDconverted);
 			ps.setString(2, serialNumber);
@@ -269,7 +269,7 @@ public class InventoryManagementApplication {
 
 			rs = ps.executeQuery();
 			if(rs.isBeforeFirst()) {
-				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
+				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
 
 				ps2 = con.prepareStatement(sqlDelete);
 				ps2.setInt(1, bucketIDconverted);
