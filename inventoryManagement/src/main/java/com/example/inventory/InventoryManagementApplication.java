@@ -50,33 +50,33 @@ public class InventoryManagementApplication {
 		openConnection();
 
 		// Use a service account
-		// try {
-		// 	InputStream serviceAccount = new FileInputStream(
-		// 			"/Users/siamabdal-ilah/repos/backend_pyro/inventoryManagement/src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
-		// 	GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
-		// 	FirebaseOptions options = new Builder()
-		// 		.setCredentials(credentials)
-		// 		.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
-		// 		.build();
-		// 	FirebaseApp.initializeApp(options);
+		try {
+			InputStream serviceAccount = new FileInputStream(
+					"/Users/siamabdal-ilah/repos/backend_pyro/inventoryManagement/src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+			FirebaseOptions options = new Builder()
+				.setCredentials(credentials)
+				.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
+				.build();
+			FirebaseApp.initializeApp(options);
 
-		// 	// FirestoreOptions options = FirebaseOptions.newBuilder()
-		// 	// 	.setCredentials(credentials)
-		// 	// 	.setTimestampsInSnapshotsEnabled(true).build();
+			// FirestoreOptions options = FirebaseOptions.newBuilder()
+			// 	.setCredentials(credentials)
+			// 	.setTimestampsInSnapshotsEnabled(true).build();
 
-		// 	// db = options.getService();
+			// db = options.getService();
 
-		// 	db = FirestoreClient.getFirestore();
-		// 	getAllParts();
-		// 	bpe = new BCryptPasswordEncoder();
-		// }catch(FileNotFoundException e){
-		// 	e.printStackTrace();
-		// 	System.out.println("FileException");
+			db = FirestoreClient.getFirestore();
+			getAllParts();
+			bpe = new BCryptPasswordEncoder();
+		}catch(FileNotFoundException e){
+			e.printStackTrace();
+			System.out.println("FileException");
 			
-		// }catch(IOException e){
-		// 	e.printStackTrace();
-		// 	System.out.println("IOExeption");
-		// }
+		}catch(IOException e){
+			e.printStackTrace();
+			System.out.println("IOExeption");
+		}
 	}
 
 	private static void getAllParts(){
