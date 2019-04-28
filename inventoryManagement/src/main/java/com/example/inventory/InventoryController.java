@@ -6,8 +6,6 @@ import com.example.inventory.datamodels.DashboardData;
 import com.example.inventory.datamodels.User;
 import com.example.inventory.datamodels.Department;
 
-
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -25,9 +23,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 
 @RestController
 public class InventoryController {
@@ -47,9 +49,9 @@ public class InventoryController {
 	@RequestMapping("/login")
 	@ResponseBody
 	public Map<String, String> login(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		response.setHeader("Access-Control-Allow-Credentials", "true");
+		setHeaders(response);
+		System.out.println("gml");
+		
 		RequestContextHolder.currentRequestAttributes().getSessionId();
 		HashMap<String, String> loginResp = new HashMap<String, String>();
 		try {
@@ -64,6 +66,7 @@ public class InventoryController {
 				HttpSession session = request.getSession();
 				String token = UUID.randomUUID().toString();
 
+				session.setMaxInactiveInterval(60 * 30);
 				session.setAttribute("csrf", token);
 				session.setAttribute("username", username);
 				System.out.println(session.getAttribute("csrf"));
@@ -84,9 +87,7 @@ public class InventoryController {
 	@RequestMapping("/logout")
 	@ResponseBody
 	public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		response.setHeader("Access-Control-Allow-Credentials", "true");
+		setHeaders(response);
 		RequestContextHolder.currentRequestAttributes().getSessionId();
 		HashMap<String, String> map = new HashMap<>();
 		try{
@@ -98,19 +99,6 @@ public class InventoryController {
 
 		return map;
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
 	
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
 	@RequestMapping(value = "/createDigitalStorageItem")
@@ -281,5 +269,24 @@ public class InventoryController {
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
+	}
+
+	@RequestMapping("/dummyUser")
+	@ResponseBody
+	public Map<String, String> dummyUser(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException, IOException {
+		System.out.println("Receieved Request on dummyUser to create user");
+		// setHeaders(response);
+		JsonNode jsonNode = new ObjectMapper().readTree(payload);
+		String username = jsonNode.get("username").asText();
+		String password = jsonNode.get("password").asText();
+
+		
+		inventoryManagement.createQuickUser(username, password);
+		return new HashMap<>();
+	}
+
+	@RequestMapping(value = "/fml")
+	public void fml(HttpServletRequest request){
+		System.out.println("fml");
 	}
 }

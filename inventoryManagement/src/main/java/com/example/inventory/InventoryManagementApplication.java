@@ -1,17 +1,23 @@
 package com.example.inventory;
 
 import com.example.inventory.datamodels.Unit;
+import com.example.inventory.datamodels.User;
 import com.example.inventory.datamodels.Items;
 import com.example.inventory.datamodels.DashboardData;
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreOptions;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.FirebaseOptions.Builder;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -22,9 +28,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @SpringBootApplication
 public class InventoryManagementApplication {
@@ -33,27 +43,40 @@ public class InventoryManagementApplication {
 	private static Connection con = null;
 	private static Firestore db;
 	private static ApiFuture<DocumentSnapshot> af;
+	private static BCryptPasswordEncoder bpe;
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
 		openConnection();
 
-
 		// Use a service account
-		try{
-			InputStream serviceAccount = new FileInputStream("pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
-			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
-			FirebaseOptions options = new FirebaseOptions.Builder()
-				.setCredentials(credentials)
-				.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
-				.build();
-			FirebaseApp.initializeApp(options);
+		// try {
+		// 	InputStream serviceAccount = new FileInputStream(
+		// 			"/Users/siamabdal-ilah/repos/backend_pyro/inventoryManagement/src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+		// 	GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+		// 	FirebaseOptions options = new Builder()
+		// 		.setCredentials(credentials)
+		// 		.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
+		// 		.build();
+		// 	FirebaseApp.initializeApp(options);
 
-			db = FirestoreClient.getFirestore();
-			getAllParts();
-		}catch(Exception e){
-			System.out.println("Initialization Failed");
-		}
+		// 	// FirestoreOptions options = FirebaseOptions.newBuilder()
+		// 	// 	.setCredentials(credentials)
+		// 	// 	.setTimestampsInSnapshotsEnabled(true).build();
+
+		// 	// db = options.getService();
+
+		// 	db = FirestoreClient.getFirestore();
+		// 	getAllParts();
+		// 	bpe = new BCryptPasswordEncoder();
+		// }catch(FileNotFoundException e){
+		// 	e.printStackTrace();
+		// 	System.out.println("FileException");
+			
+		// }catch(IOException e){
+		// 	e.printStackTrace();
+		// 	System.out.println("IOExeption");
+		// }
 	}
 
 	private static void getAllParts(){
@@ -85,41 +108,15 @@ public class InventoryManagementApplication {
 
 	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
 		boolean authenticated = false;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-
-		try {
-			if (con.isClosed()) openConnection();
-
-			String sql = "SELECT * FROM dbo.Login where UserName = ? and password = ?";
-			ps = con.prepareStatement(sql);
-			ps.setString(1, username);
-			ps.setString(2, password);
-
-			rs = ps.executeQuery();
-			if(rs != null) {
-				while(rs.next()) {
-					authenticated = true;
-				}
-
-			} 
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			authenticated = false;
-		} finally {
-		
-			if(!rs.isClosed()) {
-				rs.close();
+		try{
+			User user = db.collection("users").document(username).get().get().toObject(User.class);
+			if (bpe.matches(password, user.passwordHashed)){
+				return true;
 			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
-
+			return false;
+		}catch(Exception e){
+			return false;
 		}
-
-		return authenticated;
 	}
 
 	public Boolean createDigitalStorageItem(String bucketName, String partNumbersAllowed, String department,
@@ -133,72 +130,18 @@ public class InventoryManagementApplication {
 			if (!acceptedParts.contains(part)){
 				return false;
 			}
-			// boolean state = false;
-			// for (String p: acceptedParts){
-			// 	if (p == part){
-			// 		state = true;
-			// 		break;
-			// 	}
-			// }
-			// if (state) continue;
-			// return false;
 		}
 
 		DashboardData dd = new DashboardData(department, bucketName, 
 			location, unitOfMeasurement, maxMeasConverted, 0.0, null);
-
 		
-		db.collection("departments").document(department).collection("units").add(dd);
-
-
-		int bucketKey = 0;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		
-		try {
-			if (con.isClosed()) openConnection();
-			
-			String sql = "SELECT max(BucketID) as bucketId FROM dbo.Buckets";
-			Statement state = con.createStatement();
-			rs = state.executeQuery(sql);
-			while(rs.next()) {
-				bucketKey = rs.getInt("BucketId");
-			}
-			bucketKey++;
-
-			//insert new Storage item into the buckets table.
-			String insertSql = "insert into dbo.Buckets(BucketID, BucketName, PartNumbersAllowed, DepartmentID, UnitOfMeasurement, MaxMeasurement, Location) " +
-					"VALUES(?, ?, ?, ?, ?, ?, ?)";
-			ps = con.prepareStatement(insertSql);
-			ps.setInt(1, bucketKey);
-			ps.setString(2, bucketName);
-			ps.setString(3, partNumbersAllowed);
-			ps.setString(4, department);
-			ps.setString(5, unitOfMeasurement);
-			ps.setInt(6, maxMeasConverted);
-			ps.setString(7, location);
-
-			ps.executeUpdate();
-
-
-		} 
-		catch (SQLException e) {
-
-			e.printStackTrace();
+		ApiFuture<DocumentReference> ap = db.collection("departments").document(department).collection("units").add(dd);
+		try{
+			ap.get();
+			return true;
+		}catch(Exception e){
 			return false;
-		} 
-		finally {
-			
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
 		}
-
-		return true;
 	}
 
 
@@ -542,6 +485,18 @@ public class InventoryManagementApplication {
 		return dataList;
 	}
 
+	public void createQuickUser(String email, String pass){
+		User user = new User(email, bpe.encode(pass), "");
+		System.out.println(user.toString());
+		db.collection("users").add(user).addListener(new Runnable(){
+		
+			@Override
+			public void run() {
+				System.out.println("Adding completed");
+			}
+		}, new ForkJoinPool());
+		System.out.println("Adding user to Firebase");
 
+	}
 }
 
