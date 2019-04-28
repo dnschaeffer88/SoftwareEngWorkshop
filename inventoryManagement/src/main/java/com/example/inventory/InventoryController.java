@@ -130,21 +130,28 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/removePartsFromStorage")
 	@ResponseBody 
-	public Boolean removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
-
+	public HashMap<String, String> removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
+		HashMap<String, String> removeResp = new HashMap<String, String>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			int bucketID = jsonNode.get("bucketID").asInt();
 			String partNumber = jsonNode.get("partNumber").asText();
 			String serialNumber = jsonNode.get("serialNumber").asText();
+
 			
 			boolean response = inventoryManagement.removePartsToStorage(bucketID, partNumber, serialNumber);
-			return response;
+			if(response == true) {
+			removeResp.put("success", "true");
+			} else {
+				removeResp.put("success", "false");
+			}
+			
+			return removeResp;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
+		return removeResp;
 	}
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
