@@ -149,21 +149,29 @@ public class InventoryController {
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
 	@ResponseBody 
-	public Boolean setUpPartNumber(@RequestBody String payload) throws SQLException {
-		
+	public Map<String, String> setUpPartNumber(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+		HashMap<String, String> map = new HashMap<>();
+		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String partNumber = jsonNode.get("partNumber").asText();
 			int trackByWeight = jsonNode.get("trackByWeight").asInt();
 			int weight = jsonNode.get("weight").asInt();
 			
-			boolean response = inventoryManagement.setUpPartNumber(partNumber, trackByWeight, weight);
-			return response;
+			boolean flag = inventoryManagement.setUpPartNumber(partNumber, trackByWeight, weight);
+			if (flag == true) {
+				map.put("success", "true");
+			} else {
+				map.put("success", "false");
+			}
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
+		return map;
 	}
 	
 	@RequestMapping(value = "/addPartsToStorage")
