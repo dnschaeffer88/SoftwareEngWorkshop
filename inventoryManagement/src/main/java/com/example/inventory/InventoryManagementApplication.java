@@ -148,45 +148,43 @@ public class InventoryManagementApplication {
 	}
 
 
-	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
+	public boolean addPartsToStorage(String username, String csrf, String departmentId, String bucketName, int bucketId, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
 		// TODO Auto-generated method stub
-		// Connection con = null;
+		Connection con = null;
 		PreparedStatement ps = null;
 		PreparedStatement psInsert = null;
 		ResultSet rs = null;
 		ResultSet rs2 = null;
 
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
+			con = DriverManager.getConnection(connectionUrl);
 
-			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and Department = ? and Unit = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
+			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and DepartmentID = ? and BucketName = ? and BucketID = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
 			ps = con.prepareStatement(sql);
+			//ps.setString(1, itemId);
 			ps.setString(1, username);
 			ps.setString(2, csrf);
-			ps.setString(3, department);
-			ps.setInt(4, unit);
-			ps.setString(5, type);
-			ps.setInt(6, hasWeight);
-			ps.setInt(7, serialNo);
-			ps.setInt(8, partNo);
-			ps.setInt(9, weight);
+			ps.setString(3, departmentId);
+			ps.setString(4, bucketName);
+			ps.setInt(5, bucketId);
+			ps.setString(6, type);
+			ps.setInt(7, hasWeight);
+			ps.setInt(8, serialNo);
+			ps.setInt(9, partNo);
+			ps.setInt(10, weight);
 
 			rs = ps.executeQuery();
 			if(rs.isBeforeFirst()) {
 				//while(rs.next()) {
-				return false;
-				//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
+					return false;
+					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
 				//}
 
 			} else {
 				int itemID = 0;
-
+				
 				String sqlMaxID = "SELECT max(ItemID) as itemId FROM dbo.Items";
 				Statement state = con.createStatement();
 				rs2 = state.executeQuery(sqlMaxID);
@@ -196,23 +194,24 @@ public class InventoryManagementApplication {
 					}
 				}
 				itemID++;
-				String sqlInsert = "INSERT INTO dbo.Items(ItemID, Username, CSRF, Department, Unit, Type, HasWeight, SerialNo, PartNo, Weight) " + 
-						"values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				String sqlInsert = "INSERT INTO dbo.Items(ItemID, Username, CSRF, DepartmentID, BucketName, BucketID, Type, HasWeight, SerialNo, PartNo, Weight) " + 
+						"values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 				psInsert = con.prepareStatement(sqlInsert);
 				psInsert.setInt(1, itemID);
 				psInsert.setString(2, username);
 				psInsert.setString(3, csrf);
-				psInsert.setString(4, department);
-				psInsert.setInt(5, unit);
-				psInsert.setString(6, type);
+				psInsert.setString(4, departmentId);
+				psInsert.setString(5, bucketName);
+				psInsert.setInt(6, bucketId);
+				psInsert.setString(7, type);
 				//psInsert.setBoolean(7, hasWeight);
 				if (hasWeight != 0)
-					psInsert.setInt(7, 1);
+					psInsert.setInt(8, 1);
 				else
-					psInsert.setInt(7, 0);
-				psInsert.setInt(8, serialNo);
-				psInsert.setInt(9, partNo);
-				psInsert.setInt(10, weight);
+					psInsert.setInt(8, 0);
+				psInsert.setInt(9, serialNo);
+				psInsert.setInt(10, partNo);
+				psInsert.setInt(11, weight);
 
 				psInsert.executeUpdate();
 			}
@@ -222,7 +221,9 @@ public class InventoryManagementApplication {
 			//partLoaded = false;
 			return false;
 		} finally {
-			
+			if(!con.isClosed() && con != null) {
+				con.close();
+			}
 
 			if(!rs.isClosed() && rs != null) {
 				rs.close();
@@ -238,12 +239,12 @@ public class InventoryManagementApplication {
 			if(!rs2.isClosed() && rs2 != null) {
 				rs2.close();
 			}
-			 */
+		*/
 		}
 
 		return true;
 	}
-
+	
 	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
 		// TODO Auto-generated method stub
 		// Connection con = null;
@@ -441,7 +442,98 @@ public class InventoryManagementApplication {
 		return unitObject;
 }
 
-
+	public List<String> addUser(String Email, String FirstName, String LastName, String Password, String Role, String Department) throws SQLException {
+		
+		List<String> depts = new ArrayList<String>();
+		Connection con = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		ResultSet rsQuery = null;
+		String sqlInsert = null;
+		PreparedStatement psInsert = null;
+		int recExists = 0;
+		String sql = null;
+		String userDept = null;
+		int deptExists = 0;
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+			stmt = con.createStatement();
+			String selectSql = "SELECT Email, FirstName, LastName, Password, Role FROM dbo.Login";
+			rsQuery = stmt.executeQuery(selectSql);
+			if (rsQuery != null) {
+				while(rsQuery.next()) {
+					if (rsQuery.getString("Email").contentEquals(Email))
+						recExists = 1;			
+				}
+			}else {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}
+			
+			if (recExists == 0) {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				
+				sqlInsert = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, Department);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}else{
+				sql = "select UserEmail, UserDepartment from dbo.UserDeptJunctionTable";
+				rs = stmt.executeQuery(sql);
+				if(rs != null) {
+					while(rs.next()) {
+						if (rs.getString("UserEmail").contentEquals(Email)) {
+							userDept = rs.getString("UserDepartment");
+							depts.add(userDept);
+							if (rs.getString("UserDepartment").contentEquals(Department)) {
+								deptExists = 1;
+							}
+						}
+						//System.out.println(rs.getString("UserDepartment"));
+					}
+					if (deptExists == 0) {
+						sql = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+						psInsert = con.prepareStatement(sql);
+						psInsert.setString(1, Email);
+						psInsert.setString(2, Department);
+						psInsert.executeUpdate();
+						depts.add(Department);
+					}
+					//System.out.println(depts);
+					return depts;
+				}
+			}
+		}catch (SQLException e) {
+		}finally {
+			if(!con.isClosed()) {
+				con.close();
+			}
+		}
+		return depts;		
+	}
+	
 	public List<DashboardData> gatherDashboardData() throws SQLException {
 		// Connection con = null;
 		Statement stmt = null;
