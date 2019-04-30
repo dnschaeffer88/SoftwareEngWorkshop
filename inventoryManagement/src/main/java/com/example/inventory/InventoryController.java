@@ -216,7 +216,7 @@ public class InventoryController {
 			}else if (session.getAttribute("csrf") != csrf){
 				addItemResp.put("success", "false");
 			}else{
-				Boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, departmentId, bucketName, bucketId, type, hasWeight, serialNo, partNo, weight);
+				Boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, department, bucketName, bucketId, type, hasWeight, serialNo, partNo, weight);
 				addItemResp.put("success", responseAdd.toString());
 			}
 			
