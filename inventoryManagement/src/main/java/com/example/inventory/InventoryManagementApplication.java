@@ -18,6 +18,7 @@ import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.gson.Gson;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.FirebaseOptions.Builder;
@@ -36,6 +37,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -43,8 +45,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @SpringBootApplication
@@ -58,6 +63,7 @@ public class InventoryManagementApplication {
 	private static HashSet<PartNumber> allParts = new HashSet<>();
 	private static HashSet<String> allPartNames = new HashSet<>();
 	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
@@ -95,8 +101,12 @@ public class InventoryManagementApplication {
 		}catch(Exception e){
 			e.printStackTrace();
 			return null;
-		}
-		
+		}	
+	}
+	public boolean userIsAdmin(String email){
+		User user = grabUser(email);
+		if (user.admin.size() > 0) return true;
+		return false;
 	}
 
 	private static void getAllParts(){
@@ -121,7 +131,7 @@ public class InventoryManagementApplication {
 		}
 		System.out.println("Done with parsing parts phase");
 		System.out.println(allPartNames);
-		getAllPartsSnapshot();
+		// getAllPartsSnapshot();
 	}
 
 	private static void getAllPartsSnapshot(){
@@ -199,10 +209,10 @@ public class InventoryManagementApplication {
 	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
 		try{
 			PartNumber pm = new PartNumber(partNumber, trackByWeightConverted, weightConverted);
-			if (allPartNames.contains(partNumber)) return false;
+			// if (allPartNames.contains(partNumber)) return false;
 
 			db.collection("parts").document(partNumber).set(pm).get();
-			// getAllParts();
+			getAllParts();
 			
 		}catch(Exception e){
 			e.printStackTrace();
@@ -235,31 +245,66 @@ public class InventoryManagementApplication {
 }
 
 
-	public List<Department> gatherDashboardData(String email) throws SQLException {
+	public Map<String, String> gatherDashboardData(String email) throws SQLException {
 		User user = grabUser(email);
 		System.out.println(user.admin);
 
-		List<Department> dataList = new ArrayList<Department>();
+		List<Department> admin = new ArrayList<>();
+		List<Department> regular = new ArrayList<>();
+		Map<String, String> map = new HashMap<>();
+		Gson gson = new Gson();
 
-		user.admin.forEach((dept) -> {
-			try{
-				Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
-				ArrayList<DashboardData> data = new ArrayList<>();
-				db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
-					DashboardData dd = unit.toObject(DashboardData.class);
-					dd.setBucketId(unit.getId());
-					data.add(dd);
-				});
 
-				d.units = data;
-				dataList.add(d);
-			}catch(Exception e){
-				e.printStackTrace();
-			}
-			
-		});
+		try{
+			user.admin.forEach((dept) -> {
+				try{
+					Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
+					ArrayList<DashboardData> data = new ArrayList<>();
+					db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
+						DashboardData dd = unit.toObject(DashboardData.class);
+						dd.setBucketId(unit.getId());
+						data.add(dd);
+					});
+	
+					d.units = data;
+					admin.add(d);
+				}catch(Exception e){
+					e.printStackTrace();
+					map.put("success", "false");
+					map.put("errorMessage", "Failed to parse Regular depts from database");
+					throw new NullPointerException();
+				}
+				
+			});
+	
+			user.regular.forEach((dept) -> {
+				try{
+					Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
+					ArrayList<DashboardData> data = new ArrayList<>();
+					db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
+						DashboardData dd = unit.toObject(DashboardData.class);
+						dd.setBucketId(unit.getId());
+						data.add(dd);
+					});
+	
+					d.units = data;
+					regular.add(d);
+				}catch(Exception e){
+					e.printStackTrace();
+					map.put("success", "false");
+					map.put("errorMessage", "Failed to parse Regular depts from database");
+					throw new NullPointerException();
+				}
+				
+			});
+		}catch(NullPointerException e){
+			return map;
+		}
 
-		return dataList;
+		map.put("adminDepartments", gson.toJson(admin));
+		map.put("regularDepartments", gson.toJson(regular));
+
+		return map;
 	}
 
 	public void createQuickUser(String email, String pass){
