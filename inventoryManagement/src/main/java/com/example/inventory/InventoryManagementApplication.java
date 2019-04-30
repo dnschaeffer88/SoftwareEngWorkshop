@@ -4,12 +4,19 @@ import com.example.inventory.datamodels.Unit;
 import com.example.inventory.datamodels.User;
 import com.example.inventory.datamodels.Items;
 import com.example.inventory.datamodels.DashboardData;
+import com.example.inventory.datamodels.Department;
+import com.example.inventory.datamodels.PartNumber;
+
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.EventListener;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreException;
 import com.google.cloud.firestore.FirestoreOptions;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -19,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -26,11 +35,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.List;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -41,15 +52,19 @@ public class InventoryManagementApplication {
 	private static String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
 	private static Connection con = null;
-	private static Firestore db;
-	private static ApiFuture<DocumentSnapshot> af;
-	private static BCryptPasswordEncoder bpe;
+	private static Firestore db;// = FirestoreClient.getFirestore();
+	private static ApiFuture<QuerySnapshot> af;
+	private static BCryptPasswordEncoder bpe = new BCryptPasswordEncoder();
+	private static HashSet<PartNumber> allParts = new HashSet<>();
+	private static HashSet<String> allPartNames = new HashSet<>();
+	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
 		openConnection();
+	}
 
-		// Use a service account
+	private static void openConnection(){
 		try {
 			InputStream serviceAccount = new FileInputStream(
 					"/Users/siamabdal-ilah/repos/backend_pyro/inventoryManagement/src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
@@ -59,16 +74,10 @@ public class InventoryManagementApplication {
 				.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
 				.build();
 			FirebaseApp.initializeApp(options);
-
-			// FirestoreOptions options = FirebaseOptions.newBuilder()
-			// 	.setCredentials(credentials)
-			// 	.setTimestampsInSnapshotsEnabled(true).build();
-
-			// db = options.getService();
-
 			db = FirestoreClient.getFirestore();
+			System.out.println("Connected to Firebase. Ready to handle requests");
 			getAllParts();
-			bpe = new BCryptPasswordEncoder();
+
 		}catch(FileNotFoundException e){
 			e.printStackTrace();
 			System.out.println("FileException");
@@ -79,71 +88,236 @@ public class InventoryManagementApplication {
 		}
 	}
 
-	private static void getAllParts(){
-		af = db.collection("parts").document("parts").get();
-	}
-
-	private static Set<String> parseAllParts(){
+	public User grabUser(String email){
 		try{
-			DocumentSnapshot ds = af.get();
-			String[] res = ds.toObject(String[].class);
-			HashSet<String> hs = new HashSet<>();
-			for (String r: res){
-				hs.add(r);
-			}
-			return hs;
-		} catch(Exception e){
+			User user = db.collection("users").document(email).get().get().toObject(User.class);
+			return user;
+		}catch(Exception e){
+			e.printStackTrace();
 			return null;
 		}
 		
 	}
 
-	private static void openConnection() /*throws SQLException*/{
+	private static void getAllParts(){
+		HashSet<PartNumber> hs = new HashSet<>();
+		HashSet<String> names = new HashSet<>();
 		try{
-			con = DriverManager.getConnection(connectionUrl);
+			db.collection("parts").get().get().forEach(part -> {
+				PartNumber pn = part.toObject(PartNumber.class);
+				hs.add(pn);
+				names.add(pn.name);
+			});
 		}catch(Exception e){
-			e.printStackTrace();;
+			e.printStackTrace();
 		}
+		lock.writeLock().lock();
+		try{
+			allParts = hs;
+			allPartNames = names;
+			System.out.println("Parts information received and parsed");
+		}finally{
+			lock.writeLock().unlock();
+		}
+		System.out.println("Done with parsing parts phase");
+		System.out.println(allPartNames);
+		getAllPartsSnapshot();
 	}
 
+	private static void getAllPartsSnapshot(){
+		af = db.collection("parts").get();
+		db.collection("parts").addSnapshotListener(new EventListener<QuerySnapshot>(){
+		
+			@Override
+			public void onEvent(QuerySnapshot value, FirestoreException error) {
+				if (error == null) return;
+
+				HashSet<PartNumber> hs = new HashSet<>();
+				HashSet<String> names = new HashSet<>();
+
+				value.forEach(snap -> {
+					PartNumber pn = snap.toObject(PartNumber.class);
+					hs.add(pn);
+					names.add(pn.name);
+				});
+
+				lock.writeLock().lock();
+				try{
+					allParts = hs;
+					allPartNames = names;
+					System.out.println("Parts information updated");
+				}finally{
+					lock.writeLock().unlock();
+				}
+				System.out.println("Done with parsing updated parts");
+			}
+		});
+		
+	}
+	
 	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
-		boolean authenticated = false;
 		try{
+			System.out.println(username);
 			User user = db.collection("users").document(username).get().get().toObject(User.class);
+			
 			if (bpe.matches(password, user.passwordHashed)){
 				return true;
 			}
 			return false;
 		}catch(Exception e){
+			e.printStackTrace();
 			return false;
 		}
 	}
 
 	public Boolean createDigitalStorageItem(String bucketName, String partNumbersAllowed, String department,
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
-		//Get next primary key to use for ID.
-
 		String[] parts = partNumbersAllowed.replaceAll(" ", "").split(",");
-		Set<String> acceptedParts = parseAllParts();
+		//Set<String> acceptedParts = parseAllParts();
 
 		for (String part: parts){
-			if (!acceptedParts.contains(part)){
+			if (!allPartNames.contains(part)){
+				System.out.println("Part Number doesn't match");
 				return false;
 			}
 		}
 
+		List<String> l = Arrays.asList(parts);
+
 		DashboardData dd = new DashboardData(department, bucketName, 
-			location, unitOfMeasurement, maxMeasConverted, 0.0, null);
-		
-		ApiFuture<DocumentReference> ap = db.collection("departments").document(department).collection("units").add(dd);
+			location, unitOfMeasurement, maxMeasConverted, (double)maxMeasConverted, l);
 		try{
-			ap.get();
-			return true;
+			db.collection("departments").document(department).collection("units").add(dd).get();
 		}catch(Exception e){
+			e.printStackTrace();
 			return false;
 		}
+		
+		return true;
 	}
 
+	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
+		try{
+			PartNumber pm = new PartNumber(partNumber, trackByWeightConverted, weightConverted);
+			if (allPartNames.contains(partNumber)) return false;
+
+			db.collection("parts").document(partNumber).set(pm).get();
+			// getAllParts();
+			
+		}catch(Exception e){
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+
+	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
+	public Unit unitData(String unitID, String departmentName, String email) throws SQLException{
+		try{
+			DocumentReference ref = db.collection("departments").document(departmentName);
+
+			Department d = ref.get().get().toObject(Department.class);
+			if (!d.regulars.contains(email) && !d.admins.contains(email)) return null;
+	
+			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
+			List<Items> items = new ArrayList<>();
+			ref.collection("units").document(unitID).collection("items").get().get().forEach(itemSnap -> {
+				items.add(itemSnap.toObject(Items.class));
+			});
+
+			unit.items = items;
+
+			return unit;
+		}catch(Exception e){
+			e.printStackTrace();
+			return null;
+		}
+}
+
+
+	public List<Department> gatherDashboardData(String email) throws SQLException {
+		User user = grabUser(email);
+		System.out.println(user.admin);
+
+		List<Department> dataList = new ArrayList<Department>();
+
+		user.admin.forEach((dept) -> {
+			try{
+				Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
+				ArrayList<DashboardData> data = new ArrayList<>();
+				db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
+					DashboardData dd = unit.toObject(DashboardData.class);
+					dd.setBucketId(unit.getId());
+					data.add(dd);
+				});
+
+				d.units = data;
+				dataList.add(d);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			
+		});
+
+		return dataList;
+	}
+
+	public void createQuickUser(String email, String pass){
+		User user = new User(email, bpe.encode(pass), "");
+		db.collection("users").document(email).set(user);
+	}
+
+	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
+		// TODO Auto-generated method stub
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		//Boolean partLoaded = false;
+		PreparedStatement ps2 = null;
+
+		try {
+			if (con.isClosed()) openConnection();
+
+			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
+			ps = con.prepareStatement(sql);
+			ps.setInt(1, bucketIDconverted);
+			ps.setString(2, serialNumber);
+			ps.setString(3,  partNumber);
+
+
+			rs = ps.executeQuery();
+			if(rs.isBeforeFirst()) {
+				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
+
+				ps2 = con.prepareStatement(sqlDelete);
+				ps2.setInt(1, bucketIDconverted);
+				ps2.setString(2,  serialNumber);
+				ps2.setString(3,  partNumber);
+				ps2.executeUpdate();
+			}
+
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			//partLoaded = false;
+			return false;
+		} finally {
+		
+
+			if(!rs.isClosed()) {
+				rs.close();
+			}
+
+			if(!ps.isClosed()) {
+				ps.close();
+			}
+			/*
+			if(!ps2.isClosed()) {
+				ps2.close();
+			}
+			 */
+		}
+		return true;
+	}
 
 	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) 
 	throws SQLException {
@@ -234,269 +408,5 @@ public class InventoryManagementApplication {
 		return true;
 	}
 
-	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
-		// TODO Auto-generated method stub
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		//Boolean partLoaded = false;
-		PreparedStatement ps2 = null;
-
-		try {
-			if (con.isClosed()) openConnection();
-
-			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, bucketIDconverted);
-			ps.setString(2, serialNumber);
-			ps.setString(3,  partNumber);
-
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
-
-				ps2 = con.prepareStatement(sqlDelete);
-				ps2.setInt(1, bucketIDconverted);
-				ps2.setString(2,  serialNumber);
-				ps2.setString(3,  partNumber);
-				ps2.executeUpdate();
-			}
-
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			//partLoaded = false;
-			return false;
-		} finally {
-		
-
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
-			/*
-			if(!ps2.isClosed()) {
-				ps2.close();
-			}
-			 */
-		}
-		return true;
-	}
-
-	public boolean setUpPartNumber(String partNumber, int trackByWeightConverted, double weightConverted) throws SQLException {
-		PreparedStatement ps = null;
-		PreparedStatement psInsert = null;
-		ResultSet rs = null;
-
-		try {	
-			if (con.isClosed()) openConnection();
-
-			String sql = "SELECT * FROM dbo.PartNumbers where PartNumber = ? and TrackByWeight = ? and Weight = ?";
-			ps = con.prepareStatement(sql);
-			ps.setString(1, partNumber);
-			ps.setInt(2, trackByWeightConverted);
-			ps.setDouble(3,  weightConverted);
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-
-				return false;
-
-			} else {
-
-				String sqlInsert = "INSERT INTO dbo.PartNumbers(PartNumber, TrackByWeight, Weight) " + 
-						"values(?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setString(1, partNumber);
-				if (trackByWeightConverted != 0)
-					psInsert.setInt(2, 1);
-				else
-					psInsert.setInt(2, 0);
-				psInsert.setDouble(3, weightConverted);
-
-				psInsert.executeUpdate();
-
-			}
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			return false;
-
-		} finally {
-		
-
-			if(!rs.isClosed() && rs != null) {
-				rs.close();
-			}
-
-			if(!ps.isClosed() && ps != null) {
-				ps.close();
-			}
-			/*
-			if(!psInsert.isClosed() && psInsert != null) {
-				psInsert.close();
-			}
-			 */
-		}
-		return true;
-	}
-
-	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
-	public Unit unitData(Integer bucketID) throws SQLException{
-		
-		Unit unitObject = new Unit(false, null);
-		ResultSet rs = null;
-		ResultSet rsConfirm = null;
-		
-		try {
-			if (con.isClosed()) openConnection();
-
-			String sqlConfirm = "select * from dbo.Buckets where UnitOfMeasurement = 'pounds' AND BucketID = ?"; //" UnitOfMeasurement = 'pounds' AND BucketID = '$[bucketID]'";
-			PreparedStatement ps = null;
-			ps = con.prepareStatement(sqlConfirm);
-			ps.setString(1, bucketID.toString());
-
-			rsConfirm = ps.executeQuery(); // CHANGED some parts 
-			
-			if (rsConfirm != null) {
-				unitObject.setHasWeight(true);
-			}else {
-				unitObject.setHasWeight(false);
-				//return unitObject;
-			}
-			
-			Statement stmt = con.createStatement();
-			List<Items> itemRecords = new ArrayList<Items>();
-			String sql = "select BucketID, SerialNo, PartNo, Weight from dbo.Items";
-			System.out.println(bucketID);
-			System.out.println(unitObject);
-			rs = stmt.executeQuery(sql);
-			System.out.println(rs.getFetchSize());
-			
-			if(rs != null) {
-				while(rs.next()) {
-					//if (rs.getString("BucketID").contentEquals(bucketID)) {
-					System.out.println(1);
-					if (rs.getInt("BucketID") == bucketID) {
-						Items aRecord = new Items();	
-						
-						String partNo = rs.getString("PartNo");
-						String serialNo = rs.getString("SerialNo");
-						int weight = rs.getInt("Weight");
-						String department = rs.getString("DepartmentID");
-						int hasWeight = rs.getInt("HasWeight");
-						int unitId = rs.getInt("BucketID");
-						
-						aRecord.setPartNo(partNo);
-						aRecord.setSerialNo(serialNo);
-						aRecord.setWeight(Integer.toString(weight));
-						aRecord.setDepartment(department);
-						aRecord.setHasWeight(Integer.toString(hasWeight));
-						aRecord.setUnit(Integer.toString(unitId));
-						
-						
-
-						itemRecords.add(aRecord);
-					}
-					//System.out.println("PartNo: " + rs.getString("PartNo") + " SerialNo: " + rs.getString("SerialNo") + " Weight: " + rs.getInt("Weight"));
-				}
-				unitObject.setItems(itemRecords);
-				System.out.println(unitObject);
-			}
-			return unitObject;
-			
-		} catch (SQLException e) {
-		}
-
-		return unitObject;
-}
-
-
-	public List<DashboardData> gatherDashboardData() throws SQLException {
-		Statement stmt = null;
-		ResultSet rs = null;
-		PreparedStatement ps = null;
-
-
-		List<DashboardData> dataList = new ArrayList<DashboardData>();
-
-		try {
-
-			String sql = "select BucketID, DepartmentID, BucketName, Location, UnitOfMeasurement, MaxMeasurement from dbo.buckets";
-			stmt = con.createStatement();
-
-			rs = stmt.executeQuery(sql);
-			if(rs != null) {
-				while(rs.next()) {
-					DashboardData dashboard = new DashboardData();	
-
-					int bucketId = rs.getInt("BucketID");
-					String departmentId = rs.getString("DepartmentID");
-					String bucketName = rs.getString("BucketName");
-					String location = rs.getString("Location");
-					String unitOfMeas = rs.getString("UnitOfMeasurement");
-					int maxMeasurement = rs.getInt("MaxMeasurement");
-
-					dashboard.setBucketId(bucketId);
-					dashboard.setDepartmentId(departmentId);
-					dashboard.setUnitName(bucketName);
-					dashboard.setLocation(location);
-					dashboard.setUnitOfMeasurement(unitOfMeas);
-					dashboard.setMaxMeasurement(maxMeasurement);
-
-					dataList.add(dashboard);
-
-					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
-				}
-				if(!dataList.isEmpty()) {
-					for(DashboardData dashboardItem : dataList) {
-						String sqlCapacity = "";
-						if(("pounds").equals(dashboardItem.getUnitOfMeasurement())) {	
-							sqlCapacity = "select sum(weight) as total from dbo.items where BucketID = ?";
-						} else {
-							sqlCapacity = "select count(*) as total from dbo.items where BucketID = ?";
-						}
-						ps = con.prepareStatement(sqlCapacity);
-						ps.setInt(1, dashboardItem.getUnitID());
-						rs = ps.executeQuery();
-						if(rs.isBeforeFirst()) {
-							while(rs.next()) {
-								int total = rs.getInt("total");
-								Double convTotal = Double.valueOf(total);
-								Double capacity = (convTotal/dashboardItem.getMaxMeasurement()) * 100.0;
-								dashboardItem.setCapacity(capacity);
-							}
-						}
-					}
-				}
-			} 
-		} catch (SQLException e) {
-
-
-		}
-		finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
-		}
-		return dataList;
-	}
-
-	public void createQuickUser(String email, String pass){
-		User user = new User(email, bpe.encode(pass), "");
-		System.out.println(user.toString());
-		db.collection("users").add(user).addListener(new Runnable(){
-		
-			@Override
-			public void run() {
-				System.out.println("Adding completed");
-			}
-		}, new ForkJoinPool());
-		System.out.println("Adding user to Firebase");
-
-	}
 }
 

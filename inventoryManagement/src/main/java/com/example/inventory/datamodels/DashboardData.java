@@ -4,22 +4,22 @@ import java.util.List;
 
 public class DashboardData {
 
-	private int unitID;
-	private String departmentId;
-	private String unitName;
-	private String location;
-	private String unitOfMeasurement;
-	private int maxMeasurement;
-	private Double capacity;
+	public String unitID;
+	public String departmentName;
+	public String unitName;
+	public String location;
+	public String unitOfMeasurement;
+	public int maxMeasurement;
+	public Double capacity;
 	public List<String> partNumbersAllowed;
 	
 	
 	
-	public DashboardData(int unitID, String departmentId, String unitName, String location,
+	public DashboardData(String unitID, String departmentName, String unitName, String location,
 			String unitOfMeasurement, int maxMeasurement, Double capacity, List<String> partNumbersAllowed) {
 		super();
 		this.unitID = unitID;
-		this.departmentId = departmentId;
+		this.departmentName = departmentName;
 		this.unitName = unitName;
 		this.location = location;
 		this.unitOfMeasurement = unitOfMeasurement;
@@ -31,8 +31,8 @@ public class DashboardData {
 	public DashboardData(String departmentId, String unitName, String location,
 	String unitOfMeasurement, int maxMeasurement, Double capacity, List<String> partNumbersAllowed){
 		super();
-		this.unitID = 0;
-		this.departmentId = departmentId;
+		this.unitID = "";
+		this.departmentName = departmentId;
 		this.unitName = unitName;
 		this.location = location;
 		this.unitOfMeasurement = unitOfMeasurement;
@@ -47,63 +47,11 @@ public class DashboardData {
 
 	public DashboardData() {}
 
-	public int getUnitID() {
+	public String getUnitID() {
 		return unitID;
 	}
 
-	public void setBucketId(int unitID) {
+	public void setBucketId(String unitID) {
 		this.unitID = unitID;
 	}
-
-	public String getDepartmentId() {
-		return departmentId;
-	}
-
-	public void setDepartmentId(String departmentId) {
-		this.departmentId = departmentId;
-	}
-
-	public String getUnitName() {
-		return unitName;
-	}
-
-	public void setUnitName(String unitName) {
-		this.unitName = unitName;
-	}
-
-	public String getLocation() {
-		return location;
-	}
-
-	public void setLocation(String location) {
-		this.location = location;
-	}
-
-	public String getUnitOfMeasurement() {
-		return unitOfMeasurement;
-	}
-
-	public void setUnitOfMeasurement(String unitOfMeasurement) {
-		this.unitOfMeasurement = unitOfMeasurement;
-	}
-
-	public int getMaxMeasurement() {
-		return maxMeasurement;
-	}
-
-	public void setMaxMeasurement(int maxMeasurement) {
-		this.maxMeasurement = maxMeasurement;
-	}
-
-	public Double getCapacity() {
-		return capacity;
-	}
-
-	public void setCapacity(Double capacity) {
-		this.capacity = capacity;
-	}
-	
-	
-	
-	
 }

@@ -23,13 +23,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.UserRecord;
 
 @RestController
 public class InventoryController {
@@ -50,7 +46,7 @@ public class InventoryController {
 	@ResponseBody
 	public Map<String, String> login(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
 		setHeaders(response);
-		System.out.println("gml");
+		System.out.println("Call to /login");
 		
 		RequestContextHolder.currentRequestAttributes().getSessionId();
 		HashMap<String, String> loginResp = new HashMap<String, String>();
@@ -88,6 +84,8 @@ public class InventoryController {
 	@ResponseBody
 	public Map<String, String> logout(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
 		setHeaders(response);
+		System.out.println("Call to /logout");
+		
 		RequestContextHolder.currentRequestAttributes().getSessionId();
 		HashMap<String, String> map = new HashMap<>();
 		try{
@@ -103,8 +101,11 @@ public class InventoryController {
 	//test with: curl -H "Content-Type: application/json" --data '{"bucketName":"Unit1","partNumbersAllowed":"123789-121", "department":"testDept", "unitOfMeasurement":"pounds", "maxMeasurement":"300", "location":"testLocation"}' @body.json http://localhost:8080/createDigitalStorageItem
 	@RequestMapping(value = "/createDigitalStorageItem")
 	@ResponseBody
-	public Boolean createDigitalStorageItem(@RequestBody String payload) throws SQLException {
-		
+	public Map<String, String> createDigitalStorageItem(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+		setHeaders(response);
+		System.out.println("Call to /createDigitalStorageItem");
+
+		HashMap<String, String> map = new HashMap<>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String bucketName = jsonNode.get("bucketName").asText();
@@ -114,20 +115,25 @@ public class InventoryController {
 			int maxMeasurement = jsonNode.get("maxMeasurement").asInt();
 			String location = jsonNode.get("location").asText();
 			
-			boolean response = inventoryManagement.createDigitalStorageItem(bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
-			return response;
+			Boolean resp = inventoryManagement.createDigitalStorageItem(bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
+			map.put("success", resp.toString());
+			return map;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return false;
+		map.put("success", "false");
+			return map;
 	}
 
 	
 	@RequestMapping(value = "/removePartsFromStorage")
 	@ResponseBody 
 	public Boolean removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
+
+		setHeaders(resp);
+		System.out.println("Call to /removePartsFromStorage");
 
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
@@ -146,16 +152,21 @@ public class InventoryController {
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
 	@ResponseBody 
-	public Boolean setUpPartNumber(@RequestBody String payload) throws SQLException {
-		
+	public Boolean setUpPartNumber(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
+		setHeaders(response);
+		System.out.println("Call to /partSetUp");
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String partNumber = jsonNode.get("partNumber").asText();
 			int trackByWeight = jsonNode.get("trackByWeight").asInt();
 			int weight = jsonNode.get("weight").asInt();
+			System.out.println(weight);
+
+			// <<<<<
+			boolean hasWeight = trackByWeight == 1 ? true : false;
 			
-			boolean response = inventoryManagement.setUpPartNumber(partNumber, trackByWeight, weight);
-			return response;
+			boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
+			return resp;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -167,9 +178,9 @@ public class InventoryController {
 	@ResponseBody
 	public Map<String, String> addPartsToStorage(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException{
 		
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		response.setHeader("Access-Control-Allow-Credentials", "true");
+		setHeaders(response);
+
+		System.out.println("Call to /addPartsToStorage");
 
 		try {
 			HashMap<String, String> addItemResp = new HashMap<String, String>();
@@ -211,25 +222,37 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/unit")
 	@ResponseBody
-	public Map<String, String> unitData(HttpServletResponse response, @RequestBody String payload) throws SQLException, IOException {
-		System.out.println("fml");
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		response.setHeader("Access-Control-Allow-Credentials", "true");
+	public Map<String, String> unitData(HttpServletResponse response, @RequestBody String payload) throws SQLException{
+		setHeaders(response);
+		System.out.println("Call to /unit");
 		HashMap<String, String> unitResp = new HashMap<String, String>();
-		JsonNode jsonNode = new ObjectMapper().readTree(payload);
-		System.out.println(jsonNode);
-		int bucketID = jsonNode.get("unitID").asInt();
-		//int bucketID = 1;
-		System.out.println("Got herer");
-		Unit unitcall = inventoryManagement.unitData(bucketID);
-		System.out.println("Got herer");
-		System.out.println(unitcall.getItems());
-		System.out.println("got here");
-		unitResp.put("success", "true");
-		unitResp.put("items", unitcall.getItems().toString());
-		System.out.println("got here");
-		return unitResp;
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			System.out.println(jsonNode);
+
+			// TODO: Check CSRF
+
+
+			String unitID = jsonNode.get("unitID").asText();
+			String departmentName = jsonNode.get("departmentName").asText();
+			String email = jsonNode.get("username").asText();
+
+
+			System.out.println("Got herer");
+			Unit unitcall = inventoryManagement.unitData(unitID, departmentName, email);
+			System.out.println("Got herer");
+			System.out.println(unitcall.items);
+			System.out.println("got here");
+			unitResp.put("success", "true");
+			unitResp.put("items", unitcall.items.toString());
+			System.out.println("got here");
+
+			return unitResp;
+		}catch(Exception e){
+			e.printStackTrace();
+			return null;
+		}
+		
 
 	}
 	
@@ -237,31 +260,26 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/dashboard")
 	@ResponseBody
-	public List<Department> returnDashboard(HttpServletResponse response) throws SQLException {
-		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		response.setHeader("Access-Control-Allow-Credentials", "true");
-		List<DashboardData> dashboard = new ArrayList<DashboardData>();
-		
-		dashboard = inventoryManagement.gatherDashboardData();
-		
+	public List<Department> returnDashboard(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+		setHeaders(response);
+		System.out.println("Call to /dashboard");
 		HashMap<String, ArrayList<DashboardData>> map = new HashMap<>();
-		for (DashboardData bucket: dashboard) {
-			map.compute(bucket.getDepartmentId(), (key,  value)->{
-				if (value == null) {
-					value = new ArrayList<DashboardData>();
-				} 
-				value.add(bucket);
-				return value;
-				
-			});
-				
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String username = jsonNode.get("username").asText();
+			String csrf = jsonNode.get("csrf").asText();
+			HttpSession session = request.getSession();
+
+			// String token = (String)session.getAttribute("csrf");
+			// if (token != csrf){
+			// 	return new ArrayList<>();
+			// }
+			
+			return inventoryManagement.gatherDashboardData(username);
+		}catch(IOException e){
+			return new ArrayList<>();
 		}
-		ArrayList<Department> ret_list = new ArrayList<Department>();
-		for (Map.Entry<String, ArrayList<DashboardData>> entry: map.entrySet()) {
-			ret_list.add(new Department(entry.getKey(), entry.getValue()));
-		}
-		return ret_list;
+		
 	}
 
 
@@ -275,18 +293,14 @@ public class InventoryController {
 	@ResponseBody
 	public Map<String, String> dummyUser(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException, IOException {
 		System.out.println("Receieved Request on dummyUser to create user");
-		// setHeaders(response);
 		JsonNode jsonNode = new ObjectMapper().readTree(payload);
 		String username = jsonNode.get("username").asText();
 		String password = jsonNode.get("password").asText();
+		System.out.println(username);
+		System.out.println(password);
 
 		
 		inventoryManagement.createQuickUser(username, password);
 		return new HashMap<>();
-	}
-
-	@RequestMapping(value = "/fml")
-	public void fml(HttpServletRequest request){
-		System.out.println("fml");
 	}
 }

@@ -24,4 +24,5 @@ public class User{
     this.admin = new ArrayList<>();
     this.regular = new ArrayList<>();
   }
+  public User(){}
 }
