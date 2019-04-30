@@ -164,12 +164,24 @@ public class InventoryController {
 			int weight = jsonNode.get("weight").asInt();
 			System.out.println(weight);
 
-			// <<<<<
 			boolean hasWeight = trackByWeight == 1 ? true : false;
-			
-			Boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
-			map.put("success", resp.toString());
-			
+
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				// TODO 
+			}
+
+			if (inventoryManagement.userIsAdmin(email)){
+				Boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
+				if (resp){
+					map.put("success", "true");
+				}
+				else{
+					map.put("success", "false");
+					map.put("errorMessage",/*TODO*/ "TODO");
+				}
+			}
+
 		} catch (IOException e) {
 			e.printStackTrace();
 			map.put("success", "false");
@@ -225,7 +237,7 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/unit")
 	@ResponseBody
-	public Map<String, String> unitData(HttpServletResponse response, @RequestBody String payload) throws SQLException{
+	public Map<String, String> unitData(HttpServletResponse response, HttpServletRequest request, @RequestBody String payload) throws SQLException{
 		setHeaders(response);
 		System.out.println("Call to /unit");
 		HashMap<String, String> unitResp = new HashMap<String, String>();
@@ -233,13 +245,15 @@ public class InventoryController {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			System.out.println(jsonNode);
 
-			// TODO: Check CSRF
-
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null) {
+				unitResp.put("success", "false");
+				unitResp.put("errorMessage", "Unauthorized Access");
+				return unitResp;
+			}
 
 			String unitID = jsonNode.get("unitID").asText();
 			String departmentName = jsonNode.get("departmentName").asText();
-			String email = jsonNode.get("username").asText();
-
 
 			System.out.println("Got herer");
 			Unit unitcall = inventoryManagement.unitData(unitID, departmentName, email);
@@ -263,24 +277,28 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/dashboard")
 	@ResponseBody
-	public List<Department> returnDashboard(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+	public Map<String, String> returnDashboard(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
 		setHeaders(response);
 		System.out.println("Call to /dashboard");
-		HashMap<String, ArrayList<DashboardData>> map = new HashMap<>();
+		HashMap<String, String> map = new HashMap<>();
 		try{
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			String username = jsonNode.get("username").asText();
 			String csrf = jsonNode.get("csrf").asText();
 			HttpSession session = request.getSession();
-
-			// String token = (String)session.getAttribute("csrf");
-			// if (token != csrf){
-			// 	return new ArrayList<>();
-			// }
+			String existingCsrf = session.getAttribute("csrf").toString();
+			if (csrf != existingCsrf) throw new IllegalAccessException();
+			String username = session.getAttribute("username").toString();
+			
 			
 			return inventoryManagement.gatherDashboardData(username);
 		}catch(IOException e){
-			return new ArrayList<>();
+			map.put("success", "false");
+			map.put("errorMessage", "Failed to extract payload");
+			return map;
+		}catch(IllegalAccessException e){
+			map.put("success", "false");
+			map.put("errorMessage", "Unauthorized Access");
+			return map;
 		}
 		
 	}
@@ -290,6 +308,18 @@ public class InventoryController {
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 		response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		response.setHeader("Access-Control-Allow-Credentials", "true");
+	}
+
+	private String checkAuthorizedAccess(HttpServletRequest request, JsonNode jsonNode){
+
+		HttpSession session = request.getSession();
+		String email = session.getAttribute("username").toString();
+		String csrf = session.getAttribute("csrf").toString();
+		String currToken = jsonNode.get("csrf").asText();
+
+		if (csrf == currToken) return email;
+
+		return null;
 	}
 
 	@RequestMapping("/dummyUser")
