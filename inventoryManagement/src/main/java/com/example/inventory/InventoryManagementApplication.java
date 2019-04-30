@@ -209,7 +209,7 @@ public class InventoryManagementApplication {
 	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
 		try{
 			PartNumber pm = new PartNumber(partNumber, trackByWeightConverted, weightConverted);
-			// if (allPartNames.contains(partNumber)) return false;
+			if (allPartNames.contains(partNumber)) return false;
 
 			db.collection("parts").document(partNumber).set(pm).get();
 			getAllParts();
