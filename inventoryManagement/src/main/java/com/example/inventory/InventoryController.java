@@ -152,9 +152,11 @@ public class InventoryController {
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
 	@ResponseBody 
-	public Boolean setUpPartNumber(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
+	public Map<String, String> setUpPartNumber(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
 		setHeaders(response);
 		System.out.println("Call to /partSetUp");
+		Map<String, String> map = new HashMap<>();
+
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 			String partNumber = jsonNode.get("partNumber").asText();
@@ -165,13 +167,14 @@ public class InventoryController {
 			// <<<<<
 			boolean hasWeight = trackByWeight == 1 ? true : false;
 			
-			boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
-			return resp;
+			Boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
+			map.put("success", resp.toString());
 			
 		} catch (IOException e) {
 			e.printStackTrace();
+			map.put("success", "false");
 		}
-		return false;
+		return map;
 	}
 	
 	@RequestMapping(value = "/addPartsToStorage")
