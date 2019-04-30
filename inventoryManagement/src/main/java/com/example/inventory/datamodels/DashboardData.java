@@ -25,6 +25,7 @@ public class DashboardData {
 		this.unitOfMeasurement = unitOfMeasurement;
 		this.maxMeasurement = maxMeasurement;
 		this.capacity = capacity;
+		this.partNumbersAllowed = partNumbersAllowed;
 
 	}
 	
