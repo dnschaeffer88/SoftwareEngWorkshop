@@ -73,7 +73,7 @@ public class InventoryManagementApplication {
 	private static void openConnection(){
 		try {
 			InputStream serviceAccount = new FileInputStream(
-					"/Users/siamabdal-ilah/repos/backend_pyro/inventoryManagement/src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+					"./src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
 			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
 			FirebaseOptions options = new Builder()
 				.setCredentials(credentials)
@@ -225,7 +225,7 @@ public class InventoryManagementApplication {
 	public Unit unitData(String unitID, String departmentName, String email) throws SQLException{
 		try{
 			DocumentReference ref = db.collection("departments").document(departmentName);
-
+			
 			Department d = ref.get().get().toObject(Department.class);
 			if (!d.regulars.contains(email) && !d.admins.contains(email)) return null;
 	
