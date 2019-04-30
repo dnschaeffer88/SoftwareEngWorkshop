@@ -301,6 +301,7 @@ public class InventoryManagementApplication {
 			return map;
 		}
 
+		map.put("success", "true");
 		map.put("adminDepartments", gson.toJson(admin));
 		map.put("regularDepartments", gson.toJson(regular));
 

@@ -26,6 +26,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 
 @RestController
 public class InventoryController {
@@ -286,7 +287,13 @@ public class InventoryController {
 			String csrf = jsonNode.get("csrf").asText();
 			HttpSession session = request.getSession();
 			String existingCsrf = session.getAttribute("csrf").toString();
-			if (csrf != existingCsrf) throw new IllegalAccessException();
+
+			System.out.println(existingCsrf);
+			System.out.println("<<<>>>>");
+			System.out.println(csrf);
+			String user = jsonNode.get("username").asText();
+			System.out.println(user);
+			if (!csrf.equals(existingCsrf)){ throw new IllegalAccessException();}
 			String username = session.getAttribute("username").toString();
 			
 			
