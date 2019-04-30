@@ -183,13 +183,11 @@ public class InventoryManagementApplication {
 		}
 
 		List<String> l = Arrays.asList(parts);
-		System.out.println(l);
 
 		DashboardData dd = new DashboardData(department, bucketName, 
 			location, unitOfMeasurement, maxMeasConverted, (double)maxMeasConverted, l);
 		try{
-			System.out.println(dd.partNumbersAllowed);
-			//db.collection("departments").document(department).collection("units").add(dd).get();
+			db.collection("departments").document(department).collection("units").add(dd).get();
 		}catch(Exception e){
 			e.printStackTrace();
 			return false;
