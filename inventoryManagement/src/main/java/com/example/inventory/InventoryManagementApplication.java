@@ -418,7 +418,7 @@ public class InventoryManagementApplication {
 		if(pn.hasWeight){
 			if (unit.capacity + pn.weight > unit.maxMeasurement) return "Not enough space";
 			try{
-				ref.collection("items").add(item).get().get();
+				ref.collection("items").document(serialNo).set(item).get();
 			}catch(Exception e){
 				e.printStackTrace();
 				return "Error communicating with database";
