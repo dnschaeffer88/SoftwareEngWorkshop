@@ -115,9 +115,16 @@ public class InventoryController {
 			String unitOfMeasurement = jsonNode.get("unitOfMeasurement").asText();
 			int maxMeasurement = jsonNode.get("maxMeasurement").asInt();
 			String location = jsonNode.get("location").asText();
-			
-			Boolean resp = inventoryManagement.createDigitalStorageItem(bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
-			map.put("success", resp.toString());
+			String username = jsonNode.get("username").asText();
+			String csrf = jsonNode.get("csrf").asText();
+
+			String resp = inventoryManagement.createDigitalStorageItem(username, csrf, bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
+			if (resp.equals("success")) {
+				map.put("success", "true");
+			} else {
+				map.put("success", "false");
+				map.put("error_message", resp);
+			}
 			return map;
 			
 		} catch (IOException e) {
@@ -125,7 +132,40 @@ public class InventoryController {
 		}
 		
 		map.put("success", "false");
+		map.put("error_message", "IOException encountered. Please try again.");
+		return map;
+	}
+
+	// 'bucketId', 'user', 'csrf'
+	@RequestMapping(value = "/removeDigitalStorageItem")
+	@ResponseBody
+	public Map<String, String> removeDigitalStorageItem(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+		setHeaders(response);
+		System.out.println("Call to /removeDigitalStorageItem");
+
+		HashMap<String, String> map = new HashMap<>();
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String bucketId = jsonNode.get("bucketId").asText();
+			String username = jsonNode.get("username").asText();
+			String csrf = jsonNode.get("csrf").asText();
+			
+			String resp = inventoryManagement.removeDigitalStorageItem(username, csrf, bucketId);
+			if (resp.equals("success")) {
+				map.put("success", "true");
+			} else {
+				map.put("success", "false");
+				map.put("error_message", resp);
+			}
 			return map;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		map.put("success", "false");
+		map.put("error_message", "IOException encountered. Please try again.");
+		return map;
 	}
 
 	

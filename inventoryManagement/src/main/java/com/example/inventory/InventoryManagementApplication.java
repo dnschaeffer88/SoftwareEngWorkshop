@@ -180,15 +180,23 @@ public class InventoryManagementApplication {
 		}
 	}
 
-	public Boolean createDigitalStorageItem(String bucketName, String partNumbersAllowed, String department,
+	public String createDigitalStorageItem(String username, String csrf, String bucketName, String partNumbersAllowed, String department,
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
+		System.out.println("UnitOfMeasurement:["+unitOfMeasurement+"]");
+		if (bucketName.equals("") || partNumbersAllowed.equals("") ||
+			department.equals("") || unitOfMeasurement.equals("") ||
+			bucketName.equals("null") || partNumbersAllowed.equals("null") ||
+			department.equals("null") || unitOfMeasurement.equals("null") ||
+			maxMeasConverted == 0 || location.equals("") || location.equals("null")) {
+				return "Empty fields encountered. All fields must be filled.";
+		}
 		String[] parts = partNumbersAllowed.replaceAll(" ", "").split(",");
 		//Set<String> acceptedParts = parseAllParts();
 
+		// Need to check if the unit of measurement.
 		for (String part: parts){
 			if (!allPartNames.contains(part)){
-				System.out.println("Part Number doesn't match");
-				return false;
+				return "Part Number " + part + " doesn't match";
 			}
 		}
 
@@ -196,14 +204,20 @@ public class InventoryManagementApplication {
 
 		DashboardData dd = new DashboardData(department, bucketName, 
 			location, unitOfMeasurement, maxMeasConverted, (double)maxMeasConverted, l);
+
 		try{
 			db.collection("departments").document(department).collection("units").add(dd).get();
 		}catch(Exception e){
 			e.printStackTrace();
-			return false;
+			return "Failed to add to the database.";
 		}
 		
-		return true;
+		return "success";
+	}
+
+	//TODO
+	public String removeDigitalStorageItem(String username, String csrf, String bucketId) throws SQLException {
+		return "success";
 	}
 
 	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
