@@ -324,6 +324,7 @@ public class InventoryController {
 			unitResp.put("success", "true");
 			Gson gson = new Gson();
 
+			unitResp.put("allowedParts", gson.toJson(unitcall.partNumbersAllowed));
 			unitResp.put("items", gson.toJson(unitcall.items));
 
 			return unitResp;
