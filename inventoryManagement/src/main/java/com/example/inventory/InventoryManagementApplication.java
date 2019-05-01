@@ -186,7 +186,7 @@ public class InventoryManagementApplication {
 			maxMeasConverted == 0 || location.equals("") || location.equals("null")) {
 				return "Empty fields encountered. All fields must be filled.";
 		}
-		String[] parts = partNumbersAllowed.replaceAll(" ", "").split(",");
+		String[] parts = partNumbersAllowed.replaceAll("[ ]+", "").split(",");
 		//Set<String> acceptedParts = parseAllParts();
 
 		// Need to check if the unit of measurement.

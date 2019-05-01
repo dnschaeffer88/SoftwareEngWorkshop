@@ -117,9 +117,12 @@ public class InventoryController {
 			String location = jsonNode.get("location").asText();
 
 			String username = checkAuthorizedAccess(request, jsonNode);
+			if (username == null){
+				// TODO
+			}
 
 
-			String resp = inventoryManagement.createDigitalStorageItem(username, "", bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
+			String resp = inventoryManagement.createDigitalStorageItem(username, bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
 			if (resp.equals("success")) {
 				map.put("success", "true");
 			} else {
