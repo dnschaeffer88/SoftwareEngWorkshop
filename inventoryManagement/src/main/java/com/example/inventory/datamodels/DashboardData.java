@@ -38,7 +38,7 @@ public class DashboardData {
 		this.location = location;
 		this.unitOfMeasurement = unitOfMeasurement;
 		this.maxMeasurement = maxMeasurement;
-		this.capacity = capacity;
+		this.capacity = 0.0;
 		this.partNumbersAllowed = partNumbersAllowed;
 	}
 
