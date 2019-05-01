@@ -60,8 +60,7 @@ public class InventoryManagementApplication {
 	private static Firestore db;// = FirestoreClient.getFirestore();
 	private static ApiFuture<QuerySnapshot> af;
 	private static BCryptPasswordEncoder bpe = new BCryptPasswordEncoder();
-	private static HashSet<PartNumber> allParts = new HashSet<>();
-	private static HashSet<String> allPartNames = new HashSet<>();
+	private static HashMap<String, PartNumber> allParts = new HashMap<>();
 	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
 
@@ -110,13 +109,11 @@ public class InventoryManagementApplication {
 	}
 
 	private static void getAllParts(){
-		HashSet<PartNumber> hs = new HashSet<>();
-		HashSet<String> names = new HashSet<>();
+		HashMap<String, PartNumber> hs = new HashMap<>();
 		try{
 			db.collection("parts").get().get().forEach(part -> {
 				PartNumber pn = part.toObject(PartNumber.class);
-				hs.add(pn);
-				names.add(pn.name);
+				hs.put(pn.name, pn);
 			});
 		}catch(Exception e){
 			e.printStackTrace();
@@ -124,13 +121,11 @@ public class InventoryManagementApplication {
 		lock.writeLock().lock();
 		try{
 			allParts = hs;
-			allPartNames = names;
 			System.out.println("Parts information received and parsed");
 		}finally{
 			lock.writeLock().unlock();
 		}
 		System.out.println("Done with parsing parts phase");
-		System.out.println(allPartNames);
 		// getAllPartsSnapshot();
 	}
 
@@ -142,19 +137,16 @@ public class InventoryManagementApplication {
 			public void onEvent(QuerySnapshot value, FirestoreException error) {
 				if (error == null) return;
 
-				HashSet<PartNumber> hs = new HashSet<>();
-				HashSet<String> names = new HashSet<>();
+				HashMap<String, PartNumber> hs = new HashMap<>();
 
 				value.forEach(snap -> {
 					PartNumber pn = snap.toObject(PartNumber.class);
-					hs.add(pn);
-					names.add(pn.name);
+					hs.put(pn.name, pn);
 				});
 
 				lock.writeLock().lock();
 				try{
 					allParts = hs;
-					allPartNames = names;
 					System.out.println("Parts information updated");
 				}finally{
 					lock.writeLock().unlock();
@@ -180,9 +172,13 @@ public class InventoryManagementApplication {
 		}
 	}
 
-	public String createDigitalStorageItem(String username, String csrf, String bucketName, String partNumbersAllowed, String department,
+	public String createDigitalStorageItem(String username,String bucketName, String partNumbersAllowed, String department,
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
 		System.out.println("UnitOfMeasurement:["+unitOfMeasurement+"]");
+
+		User user = grabUser(username);
+		if (!user.admin.contains(department)) return "You do not have the privilege for this action";
+
 		if (bucketName.equals("") || partNumbersAllowed.equals("") ||
 			department.equals("") || unitOfMeasurement.equals("") ||
 			bucketName.equals("null") || partNumbersAllowed.equals("null") ||
@@ -195,8 +191,11 @@ public class InventoryManagementApplication {
 
 		// Need to check if the unit of measurement.
 		for (String part: parts){
-			if (!allPartNames.contains(part)){
+			if (!allParts.containsKey(part)){
 				return "Part Number " + part + " doesn't match";
+			}
+			if (allParts.get(part).hasWeight != (unitOfMeasurement == "weight")){
+				return "Part Number " + part + " doesn't match unit's measurement";
 			}
 		}
 

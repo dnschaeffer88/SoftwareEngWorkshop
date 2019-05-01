@@ -115,10 +115,11 @@ public class InventoryController {
 			String unitOfMeasurement = jsonNode.get("unitOfMeasurement").asText();
 			int maxMeasurement = jsonNode.get("maxMeasurement").asInt();
 			String location = jsonNode.get("location").asText();
-			String username = jsonNode.get("username").asText();
-			String csrf = jsonNode.get("csrf").asText();
 
-			String resp = inventoryManagement.createDigitalStorageItem(username, csrf, bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
+			String username = checkAuthorizedAccess(request, jsonNode);
+
+
+			String resp = inventoryManagement.createDigitalStorageItem(username, "", bucketName, partNumbersAllowed, department, unitOfMeasurement, maxMeasurement, location);
 			if (resp.equals("success")) {
 				map.put("success", "true");
 			} else {
