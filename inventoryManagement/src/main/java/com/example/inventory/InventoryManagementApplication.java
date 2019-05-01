@@ -194,7 +194,7 @@ public class InventoryManagementApplication {
 			if (!allParts.containsKey(part)){
 				return "Part Number " + part + " doesn't match";
 			}
-			if (allParts.get(part).hasWeight != (unitOfMeasurement == "weight")){
+			if (allParts.get(part).hasWeight != (unitOfMeasurement.equals("weight"))){
 				return "Part Number " + part + " doesn't match unit's measurement";
 			}
 		}
@@ -403,7 +403,7 @@ public class InventoryManagementApplication {
 		}
 
 		for (Item item : unit.items){
-			if (item.getSerialNo() == serialNo){
+			if (item.getSerialNo().equals(serialNo)){
 				return "Item with same serial number already exists";
 			}
 		}

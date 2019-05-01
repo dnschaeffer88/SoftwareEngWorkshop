@@ -281,7 +281,7 @@ public class InventoryController {
 
 			String result = inventoryManagement.addPartsToStorage(email, departmentName, unitID, serialNo, partNumber);
 
-			if (result == "success"){
+			if (result.equals("success")){
 				addItemResp.put("success", "true");
 				return addItemResp;
 			}else{
