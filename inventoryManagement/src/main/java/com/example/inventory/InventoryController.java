@@ -35,6 +35,24 @@ public class InventoryController {
 	InventoryManagementApplication inventoryManagement;
 
 
+	@RequestMapping("/checkLogin")
+	@ResponseBody
+	public Map<String, String> checkLogin(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
+		Map<String, String> map = new HashMap<>();
+		HttpSession session = request.getSession(false);
+		if (session == null){
+			map.put("success", "false");
+			return map;
+		}else{
+			String token = UUID.randomUUID().toString();
+			session.setAttribute("csrf", token);
+			// session.setMaxInactiveInterval(60 * 30);
+			map.put("success", "true");
+			map.put("csrf", token);
+			return map;
+		}
+	}
+
 	/*login method is set up to take a json 
 	 * payload and return a string as a response. 
 	 * This is just for testing. Eventually it will return
@@ -45,7 +63,7 @@ public class InventoryController {
 	 */
 	@RequestMapping("/login")
 	@ResponseBody
-	public Map<String, String> login(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException, ClassNotFoundException {
+	public Map<String, String> login(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
 		setHeaders(response);
 		System.out.println("Call to /login");
 		

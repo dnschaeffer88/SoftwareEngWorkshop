@@ -157,7 +157,7 @@ public class InventoryManagementApplication {
 		
 	}
 	
-	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
+	public Boolean authenticateIntoApplication(String username, String password){
 		try{
 			System.out.println(username);
 			User user = db.collection("users").document(username).get().get().toObject(User.class);
