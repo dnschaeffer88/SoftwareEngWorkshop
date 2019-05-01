@@ -150,11 +150,14 @@ public class InventoryController {
 		HashMap<String, String> map = new HashMap<>();
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			String bucketId = jsonNode.get("bucketId").asText();
-			String username = jsonNode.get("username").asText();
-			String csrf = jsonNode.get("csrf").asText();
+			String unitID = jsonNode.get("unitID").asText();
+			String departmentName = jsonNode.get("departmentName").asText();
+
+			String username = checkAuthorizedAccess(request, jsonNode);
+
+
 			
-			String resp = inventoryManagement.removeDigitalStorageItem(username, csrf, bucketId);
+			String resp = inventoryManagement.removeDigitalStorageItem(username, departmentName, unitID);
 			if (resp.equals("success")) {
 				map.put("success", "true");
 			} else {

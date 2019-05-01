@@ -215,7 +215,18 @@ public class InventoryManagementApplication {
 	}
 
 	//TODO
-	public String removeDigitalStorageItem(String username, String csrf, String bucketId) throws SQLException {
+	public String removeDigitalStorageItem(String email, String departmentName, String unitID){
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName)){
+			return "Unauthorized";
+		}
+		try{
+			db.collection("departments").document(departmentName).collection("units").document(unitID).delete().get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error communicating with the database";
+		}
+		
 		return "success";
 	}
 
