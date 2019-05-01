@@ -22,6 +22,7 @@ import com.example.inventory.datamodels.PartNumber;
 import com.example.inventory.datamodels.Unit;
 import com.example.inventory.datamodels.User;
 import com.google.api.core.ApiFuture;
+import com.google.api.services.gmail.Gmail;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.EventListener;
@@ -50,6 +51,7 @@ public class InventoryManagementApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
 		openConnection();
+		// Gmail gmail = new Gma
 	}
 
 	private static void openConnection(){
@@ -357,7 +359,7 @@ public class InventoryManagementApplication {
 		}
 		
 		try{
-			unitRef.collection("items").document("serialNo").delete().get();
+			unitRef.collection("items").document(serialNo).delete().get();
 		}catch(Exception e){
 			return "FATAL: Capacity updated but item not removed";
 		}

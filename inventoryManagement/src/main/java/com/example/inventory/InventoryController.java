@@ -35,7 +35,7 @@ public class InventoryController {
 	InventoryManagementApplication inventoryManagement;
 
 
-	@RequestMapping("/checkLogin")
+	@RequestMapping(value = "/checkLogin")
 	@ResponseBody
 	public Map<String, String> checkLogin(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
 
