@@ -384,6 +384,8 @@ public class InventoryController {
 		String email = session.getAttribute("username").toString();
 		String csrf = session.getAttribute("csrf").toString();
 		String currToken = jsonNode.get("csrf").asText();
+		System.out.println(csrf);
+		System.out.println(currToken);
 
 		if (csrf == currToken) return email;
 
