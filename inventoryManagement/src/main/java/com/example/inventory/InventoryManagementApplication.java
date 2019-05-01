@@ -2,7 +2,7 @@ package com.example.inventory;
 
 import com.example.inventory.datamodels.Unit;
 import com.example.inventory.datamodels.User;
-import com.example.inventory.datamodels.Items;
+import com.example.inventory.datamodels.Item;
 import com.example.inventory.datamodels.DashboardData;
 import com.example.inventory.datamodels.Department;
 import com.example.inventory.datamodels.PartNumber;
@@ -246,7 +246,7 @@ public class InventoryManagementApplication {
 	}
 
 	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
-	public Unit unitData(String unitID, String departmentName, String email) throws SQLException{
+	public Unit unitData(String unitID, String departmentName, String email){
 		try{
 			DocumentReference ref = db.collection("departments").document(departmentName);
 			
@@ -254,9 +254,9 @@ public class InventoryManagementApplication {
 			if (!d.regulars.contains(email) && !d.admins.contains(email)) return null;
 	
 			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
-			List<Items> items = new ArrayList<>();
+			List<Item> items = new ArrayList<>();
 			ref.collection("units").document(unitID).collection("items").get().get().forEach(itemSnap -> {
-				items.add(itemSnap.toObject(Items.class));
+				items.add(itemSnap.toObject(Item.class));
 			});
 
 			unit.items = items;
@@ -389,94 +389,63 @@ public class InventoryManagementApplication {
 		return true;
 	}
 
-	public boolean addPartsToStorage(String username, String csrf, String department, int unit, String type, int hasWeight, int serialNo, int partNo, int weight) 
-	throws SQLException {
-		PreparedStatement ps = null;
-		PreparedStatement psInsert = null;
-		ResultSet rs = null;
-		ResultSet rs2 = null;
-
-		try {
-			if (con.isClosed()) openConnection();
-
-			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and Department = ? and Unit = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
-			ps = con.prepareStatement(sql);
-			ps.setString(1, username);
-			ps.setString(2, csrf);
-			ps.setString(3, department);
-			ps.setInt(4, unit);
-			ps.setString(5, type);
-			ps.setInt(6, hasWeight);
-			ps.setInt(7, serialNo);
-			ps.setInt(8, partNo);
-			ps.setInt(9, weight);
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-				//while(rs.next()) {
-				return false;
-				//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
-				//}
-
-			} else {
-				int itemID = 0;
-
-				String sqlMaxID = "SELECT max(ItemID) as itemId FROM dbo.Items";
-				Statement state = con.createStatement();
-				rs2 = state.executeQuery(sqlMaxID);
-				if(rs2.isBeforeFirst()) {
-					while(rs2.next()) {
-						itemID = rs2.getInt("itemId");
-					}
-				}
-				itemID++;
-				String sqlInsert = "INSERT INTO dbo.Items(ItemID, Username, CSRF, Department, Unit, Type, HasWeight, SerialNo, PartNo, Weight) " + 
-						"values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setInt(1, itemID);
-				psInsert.setString(2, username);
-				psInsert.setString(3, csrf);
-				psInsert.setString(4, department);
-				psInsert.setInt(5, unit);
-				psInsert.setString(6, type);
-				//psInsert.setBoolean(7, hasWeight);
-				if (hasWeight != 0)
-					psInsert.setInt(7, 1);
-				else
-					psInsert.setInt(7, 0);
-				psInsert.setInt(8, serialNo);
-				psInsert.setInt(9, partNo);
-				psInsert.setInt(10, weight);
-
-				psInsert.executeUpdate();
-			}
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			//partLoaded = false;
-			return false;
-		} finally {
-			
-
-			if(!rs.isClosed() && rs != null) {
-				rs.close();
-			}
-
-			if(!ps.isClosed() && ps != null) {
-				ps.close();
-			}
-			/*
-			if(!psInsert.isClosed() && psInsert != null) {
-				psInsert.close();
-			}
-			if(!rs2.isClosed() && rs2 != null) {
-				rs2.close();
-			}
-			 */
+	public String addPartsToStorage(String email, String departmentName, String unitID, String serialNo, String partNumber) {
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName) && !user.regular.contains(departmentName)){
+			return "Unauthorized";
 		}
 
-		return true;
-	}
+		Unit unit = unitData(unitID, departmentName, email);
+		if (unit == null) return "Implementation Error";
 
+		if (!unit.partNumbersAllowed.contains(partNumber)){
+			return "Part Number not allowed";
+		}
+
+		for (Item item : unit.items){
+			if (item.getSerialNo() == serialNo){
+				return "Item with same serial number already exists";
+			}
+		}
+
+		if (!allParts.containsKey(partNumber)) return "Implementation Error";
+
+		PartNumber pn = allParts.get(partNumber);
+
+		Item item = new Item(partNumber, serialNo, unit.hasWeight? pn.weight: 0, departmentName, "whatever", unitID);
+		DocumentReference ref = db.collection("departments").document(departmentName).collection("units").document(unitID);
+
+		if(pn.hasWeight){
+			if (unit.capacity + pn.weight > unit.maxMeasurement) return "Not enough space";
+			try{
+				ref.collection("items").add(item).get().get();
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+			unit.capacity += pn.weight;
+			try{
+				ref.set(unit); // THIS MIGHT NOT WORK
+			}catch(Exception e){
+				return "FATAL: Was unable to update occupied space in the database";
+			}
+			
+		}else{
+			if (unit.capacity == unit.maxMeasurement) return "Not enough space";
+			try{
+				ref.collection("items").add(item).get().get();
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+			unit.capacity += 1;
+			try{
+				ref.set(unit); // THIS MIGHT NOT WORK
+			}catch(Exception e){
+				return "FATAL: Was unable to update occupied space in the database";
+			}
+		}
+		return "success";
+	}
 }
 

@@ -14,7 +14,7 @@ public class Unit {
 	public List<String> partNumbersAllowed;
 
 	public boolean hasWeight;
-	public List<Items> items;
+	public List<Item> items;
 
 	public Unit(String unitID, String departmentName, String unitName, String location,
 			String unitOfMeasurement, int maxMeasurement, Double capacity, List<String> partNumbersAllowed) {
@@ -53,7 +53,7 @@ public class Unit {
 		for (Field f: this.getClass().getDeclaredFields()){
 			if (f.getName() == "items"){
 				res += "items: [";
-				for (Items item: items){
+				for (Item item: items){
 					res += item.toString() + ",";
 				}
 				res += " ], ";

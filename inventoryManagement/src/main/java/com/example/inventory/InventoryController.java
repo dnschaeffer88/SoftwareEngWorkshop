@@ -1,7 +1,7 @@
 package com.example.inventory;
 
 import com.example.inventory.datamodels.Unit;
-import com.example.inventory.datamodels.Items;
+import com.example.inventory.datamodels.Item;
 import com.example.inventory.datamodels.DashboardData;
 import com.example.inventory.datamodels.User;
 import com.example.inventory.datamodels.Department;
@@ -154,7 +154,9 @@ public class InventoryController {
 			String departmentName = jsonNode.get("departmentName").asText();
 
 			String username = checkAuthorizedAccess(request, jsonNode);
-
+			if (username == null){
+				// TODO
+			}
 
 			
 			String resp = inventoryManagement.removeDigitalStorageItem(username, departmentName, unitID);
@@ -242,45 +244,39 @@ public class InventoryController {
 	public Map<String, String> addPartsToStorage(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException{
 		
 		setHeaders(response);
-
 		System.out.println("Call to /addPartsToStorage");
 
-		try {
-			HashMap<String, String> addItemResp = new HashMap<String, String>();
-			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			String username = jsonNode.get("username").asText();
-			String csrf = jsonNode.get("csrf").asText();
-			String department = jsonNode.get("department").asText();
-			int unit = jsonNode.get("unit").asInt();
-			String type = jsonNode.get("type").asText();
-			int hasWeight = jsonNode.get("hasWeight").asInt(); // CHANGED TO BOOLEAN FROM INT -- SIAM
-			int serialNo = jsonNode.get("serialNo").asInt();
-			int partNo = jsonNode.get("partNo").asInt();
-			
-			// >>>>>> BEFORE
-			// int weight = jsonNode.get("weight").asInt();
-			// ======
-			int weight = 1;
-			if (hasWeight != 0) weight = jsonNode.get("weight").asInt();
-			// <<<<<<
+		HashMap<String, String> addItemResp = new HashMap<String, String>();
 
-			HttpSession session = request.getSession();
-			if (session.getAttribute("username") != username){
-				addItemResp.put("success", "false");
-			}else if (session.getAttribute("csrf") != csrf){
-				addItemResp.put("success", "false");
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+
+			String departmentName = jsonNode.get("departmentName").asText(); // was department
+			String unitID = jsonNode.get("unitID").asText();
+			String serialNo = jsonNode.get("serialNo").asText();
+			String partNumber = jsonNode.get("partNo").asText();
+
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null) {
+				// TODO
+			}
+
+			String result = inventoryManagement.addPartsToStorage(email, departmentName, unitID, serialNo, partNumber);
+
+			if (result == "success"){
+				addItemResp.put("success", "true");
+				return addItemResp;
 			}else{
-				Boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, department, unit, type, hasWeight, serialNo, partNo, weight);
-				addItemResp.put("success", responseAdd.toString());
+				addItemResp.put("errorMessage", result);
 			}
 			
-			return addItemResp;
-			
 		} catch (IOException e) {
+			addItemResp.put("errorMessage", "Incorrect request");
 			e.printStackTrace();
 		}
 		
-		return null;
+		addItemResp.put("success", "false");
+		return addItemResp;
 	}
 	
 	@RequestMapping(value = "/unit")
