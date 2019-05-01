@@ -1,64 +1,47 @@
 package com.example.inventory;
 
-import com.example.inventory.datamodels.Unit;
-import com.example.inventory.datamodels.User;
-import com.example.inventory.datamodels.Item;
-import com.example.inventory.datamodels.DashboardData;
-import com.example.inventory.datamodels.Department;
-import com.example.inventory.datamodels.PartNumber;
-
-import com.google.api.core.ApiFuture;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.EventListener;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreException;
-import com.google.cloud.firestore.FirestoreOptions;
-import com.google.cloud.firestore.QuerySnapshot;
-import com.google.cloud.firestore.WriteResult;
-import com.google.firebase.cloud.FirestoreClient;
-import com.google.gson.Gson;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import com.google.firebase.FirebaseOptions.Builder;
-
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.example.inventory.datamodels.DashboardData;
+import com.example.inventory.datamodels.Department;
+import com.example.inventory.datamodels.Item;
+import com.example.inventory.datamodels.PartNumber;
+import com.example.inventory.datamodels.Unit;
+import com.example.inventory.datamodels.User;
+import com.google.api.core.ApiFuture;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.EventListener;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreException;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.FirebaseOptions.Builder;
+import com.google.firebase.cloud.FirestoreClient;
+import com.google.gson.Gson;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @SpringBootApplication
 public class InventoryManagementApplication {
-	private static String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
-	private static Connection con = null;
-	private static Firestore db;// = FirestoreClient.getFirestore();
-	private static ApiFuture<QuerySnapshot> af;
+	private static Firestore db;
 	private static BCryptPasswordEncoder bpe = new BCryptPasswordEncoder();
 	private static HashMap<String, PartNumber> allParts = new HashMap<>();
 	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -129,33 +112,33 @@ public class InventoryManagementApplication {
 		// getAllPartsSnapshot();
 	}
 
-	private static void getAllPartsSnapshot(){
-		af = db.collection("parts").get();
-		db.collection("parts").addSnapshotListener(new EventListener<QuerySnapshot>(){
+	// private static void getAllPartsSnapshot(){
+	// 	af = db.collection("parts").get();
+	// 	db.collection("parts").addSnapshotListener(new EventListener<QuerySnapshot>(){
 		
-			@Override
-			public void onEvent(QuerySnapshot value, FirestoreException error) {
-				if (error == null) return;
+	// 		@Override
+	// 		public void onEvent(QuerySnapshot value, FirestoreException error) {
+	// 			if (error == null) return;
 
-				HashMap<String, PartNumber> hs = new HashMap<>();
+	// 			HashMap<String, PartNumber> hs = new HashMap<>();
 
-				value.forEach(snap -> {
-					PartNumber pn = snap.toObject(PartNumber.class);
-					hs.put(pn.name, pn);
-				});
+	// 			value.forEach(snap -> {
+	// 				PartNumber pn = snap.toObject(PartNumber.class);
+	// 				hs.put(pn.name, pn);
+	// 			});
 
-				lock.writeLock().lock();
-				try{
-					allParts = hs;
-					System.out.println("Parts information updated");
-				}finally{
-					lock.writeLock().unlock();
-				}
-				System.out.println("Done with parsing updated parts");
-			}
-		});
+	// 			lock.writeLock().lock();
+	// 			try{
+	// 				allParts = hs;
+	// 				System.out.println("Parts information updated");
+	// 			}finally{
+	// 				lock.writeLock().unlock();
+	// 			}
+	// 			System.out.println("Done with parsing updated parts");
+	// 		}
+	// 	});
 		
-	}
+	// }
 	
 	public Boolean authenticateIntoApplication(String username, String password){
 		try{
@@ -269,7 +252,7 @@ public class InventoryManagementApplication {
 }
 
 
-	public Map<String, String> gatherDashboardData(String email) throws SQLException {
+	public Map<String, String> gatherDashboardData(String email) {
 		User user = grabUser(email);
 		System.out.println(user.admin);
 
@@ -337,56 +320,48 @@ public class InventoryManagementApplication {
 		db.collection("users").document(email).set(user);
 	}
 
-	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
-		// TODO Auto-generated method stub
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		//Boolean partLoaded = false;
-		PreparedStatement ps2 = null;
-
-		try {
-			if (con.isClosed()) openConnection();
-
-			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, bucketIDconverted);
-			ps.setString(2, serialNumber);
-			ps.setString(3,  partNumber);
-
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNumber = ? and PartNumber = ?";
-
-				ps2 = con.prepareStatement(sqlDelete);
-				ps2.setInt(1, bucketIDconverted);
-				ps2.setString(2,  serialNumber);
-				ps2.setString(3,  partNumber);
-				ps2.executeUpdate();
-			}
-
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			//partLoaded = false;
-			return false;
-		} finally {
-		
-
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
-			/*
-			if(!ps2.isClosed()) {
-				ps2.close();
-			}
-			 */
+	public String removePartsToStorage(String email, String departmentName, String unitID, String serialNo) {
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName) && !user.regular.contains(departmentName)){
+			return "Unauthorized";
 		}
-		return true;
+
+		Unit unit = unitData(unitID, departmentName, email);
+		if (unit == null) return "Implementation Error";
+		DocumentReference unitRef = db.collection("departments").document(departmentName).collection("units").document(unitID);
+
+		if (unit.hasWeight){
+			Item item = null;
+			try{
+				item = unitRef.collection("items").document("serialNo").get().get().toObject(Item.class);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+
+			unit.capacity -= item.getWeight();
+			try{
+				unitRef.set(unit);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+		}else{
+			unit.capacity -= 1;
+			try{
+				unitRef.set(unit);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+		}
+		
+		try{
+			unitRef.collection("items").document("serialNo").delete().get();
+		}catch(Exception e){
+			return "FATAL: Capacity updated but item not removed";
+		}
+		return "success";
 	}
 
 	public String addPartsToStorage(String email, String departmentName, String unitID, String serialNo, String partNumber) {

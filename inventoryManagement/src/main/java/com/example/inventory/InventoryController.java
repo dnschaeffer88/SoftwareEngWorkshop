@@ -201,24 +201,37 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/removePartsFromStorage")
 	@ResponseBody 
-	public Boolean removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
+	public Map<String, String> removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
 
 		setHeaders(resp);
 		System.out.println("Call to /removePartsFromStorage");
+		Map<String, String> map = new HashMap<>();
 
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
-			int bucketID = jsonNode.get("bucketID").asInt();
-			String partNumber = jsonNode.get("partNumber").asText();
-			String serialNumber = jsonNode.get("serialNumber").asText();
+			String unitID = jsonNode.get("unitID").asText();
+			String serialNo = jsonNode.get("serialNo").asText();
+			String departmentName = jsonNode.get("departmentName").asText();
+
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				// TODO
+			}
 			
-			boolean response = inventoryManagement.removePartsToStorage(bucketID, partNumber, serialNumber);
-			return response;
+			String result = inventoryManagement.removePartsToStorage(email, departmentName, unitID, serialNo);
+			if (result.equals("success")){
+				map.put("success", "true");
+				return map;
+			}
+			map.put("errorMessage", result);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
+			map.put("errorMessage", "Incorrect request");
 		}
-		return false;
+
+		map.put("success", "false");
+		return map;
 	}
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
@@ -350,9 +363,6 @@ public class InventoryController {
 			HttpSession session = request.getSession();
 			String existingCsrf = session.getAttribute("csrf").toString();
 
-			System.out.println(existingCsrf);
-			System.out.println("<<<>>>>");
-			System.out.println(csrf);
 			String user = jsonNode.get("username").asText();
 			System.out.println(user);
 			if (!csrf.equals(existingCsrf)){ throw new IllegalAccessException();}
