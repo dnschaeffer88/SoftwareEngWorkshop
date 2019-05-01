@@ -38,8 +38,11 @@ public class InventoryController {
 	@RequestMapping("/checkLogin")
 	@ResponseBody
 	public Map<String, String> checkLogin(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
+
+		setHeaders(response);
 		Map<String, String> map = new HashMap<>();
 		HttpSession session = request.getSession(false);
+		System.out.println(session);
 		if (session == null){
 			map.put("success", "false");
 			return map;
