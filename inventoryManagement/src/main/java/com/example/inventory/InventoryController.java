@@ -387,7 +387,7 @@ public class InventoryController {
 		System.out.println(csrf);
 		System.out.println(currToken);
 
-		if (csrf == currToken) return email;
+		if (csrf.equals(currToken)) return email;
 
 		return null;
 	}
