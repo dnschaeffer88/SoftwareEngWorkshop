@@ -320,14 +320,11 @@ public class InventoryController {
 			String unitID = jsonNode.get("unitID").asText();
 			String departmentName = jsonNode.get("departmentName").asText();
 
-			System.out.println("Got herer");
 			Unit unitcall = inventoryManagement.unitData(unitID, departmentName, email);
-			System.out.println("Got herer");
-			System.out.println(unitcall.items);
-			System.out.println("got here");
 			unitResp.put("success", "true");
-			unitResp.put("items", unitcall.items.toString());
-			System.out.println("got here");
+			Gson gson = new Gson();
+
+			unitResp.put("items", gson.toJson(unitcall.items));
 
 			return unitResp;
 		}catch(Exception e){

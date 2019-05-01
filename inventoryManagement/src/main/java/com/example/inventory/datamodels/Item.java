@@ -22,24 +22,24 @@ public class Item {
 
 
 
-	@Override
-	public String toString(){
-		String res = "{";
+	// @Override
+	// public String toString(){
+	// 	String res = "{";
 
-		for (Field f: this.getClass().getDeclaredFields()){
-			res += f.getName() + ":";
-			try{
-				res += f.get(this).toString();
-			}catch(IllegalAccessException e){
-				res += "";
-			}
-			res += ",";
-		}
-		res += "}";
+	// 	for (Field f: this.getClass().getDeclaredFields()){
+	// 		res += f.getName() + ":";
+	// 		try{
+	// 			res += f.get(this).toString();
+	// 		}catch(IllegalAccessException e){
+	// 			res += "";
+	// 		}
+	// 		res += ",";
+	// 	}
+	// 	res += "}";
 
-		return res;
+	// 	return res;
 
-		// return new JsonObject(this.toMap());
+	// 	// return new JsonObject(this.toMap());
 	}
 
 	
