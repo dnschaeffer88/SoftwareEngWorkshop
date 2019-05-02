@@ -161,8 +161,87 @@ public class InventoryManagementApplication {
 			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
 		System.out.println("UnitOfMeasurement:["+unitOfMeasurement+"]");
 
+<<<<<<< HEAD
 		User user = grabUser(username);
 		if (!user.admin.contains(department)) return "You do not have the privilege for this action";
+=======
+	public boolean addPartsToStorage(String username, String csrf, String departmentId, String bucketName, int bucketId, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
+		// TODO Auto-generated method stub
+		Connection con = null;
+		PreparedStatement ps = null;
+		PreparedStatement psInsert = null;
+		ResultSet rs = null;
+		ResultSet rs2 = null;
+
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+
+			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and DepartmentID = ? and BucketName = ? and BucketID = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
+			ps = con.prepareStatement(sql);
+			//ps.setString(1, itemId);
+			ps.setString(1, username);
+			ps.setString(2, csrf);
+			ps.setString(3, departmentId);
+			ps.setString(4, bucketName);
+			ps.setInt(5, bucketId);
+			ps.setString(6, type);
+			ps.setInt(7, hasWeight);
+			ps.setInt(8, serialNo);
+			ps.setInt(9, partNo);
+			ps.setInt(10, weight);
+
+			rs = ps.executeQuery();
+			if(rs.isBeforeFirst()) {
+				//while(rs.next()) {
+					return false;
+					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
+				//}
+
+			} else {
+				int itemID = 0;
+				
+				String sqlMaxID = "SELECT max(ItemID) as itemId FROM dbo.Items";
+				Statement state = con.createStatement();
+				rs2 = state.executeQuery(sqlMaxID);
+				if(rs2.isBeforeFirst()) {
+					while(rs2.next()) {
+						itemID = rs2.getInt("itemId");
+					}
+				}
+				itemID++;
+				String sqlInsert = "INSERT INTO dbo.Items(ItemID, Username, CSRF, DepartmentID, BucketName, BucketID, Type, HasWeight, SerialNo, PartNo, Weight) " + 
+						"values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setInt(1, itemID);
+				psInsert.setString(2, username);
+				psInsert.setString(3, csrf);
+				psInsert.setString(4, departmentId);
+				psInsert.setString(5, bucketName);
+				psInsert.setInt(6, bucketId);
+				psInsert.setString(7, type);
+				//psInsert.setBoolean(7, hasWeight);
+				if (hasWeight != 0)
+					psInsert.setInt(8, 1);
+				else
+					psInsert.setInt(8, 0);
+				psInsert.setInt(9, serialNo);
+				psInsert.setInt(10, partNo);
+				psInsert.setInt(11, weight);
+
+				psInsert.executeUpdate();
+			}
+		} catch (SQLException e) {
+
+			e.printStackTrace();
+			//partLoaded = false;
+			return false;
+		} finally {
+			if(!con.isClosed() && con != null) {
+				con.close();
+			}
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 
 		if (bucketName.equals("") || partNumbersAllowed.equals("") ||
 			department.equals("") || unitOfMeasurement.equals("") ||
@@ -182,12 +261,54 @@ public class InventoryManagementApplication {
 			if (allParts.get(part).hasWeight != (unitOfMeasurement.equals("weight"))){
 				return "Part Number " + part + " doesn't match unit's measurement";
 			}
+<<<<<<< HEAD
 		}
 
 		List<String> l = Arrays.asList(parts);
 
 		DashboardData dd = new DashboardData(department, bucketName, 
 			location, unitOfMeasurement, maxMeasConverted, (double)maxMeasConverted, l);
+=======
+		*/
+		}
+
+		return true;
+	}
+	
+	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
+		// TODO Auto-generated method stub
+		// Connection con = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		//Boolean partLoaded = false;
+		PreparedStatement ps2 = null;
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+
+		try {
+			// >>>
+			// con = DriverManager.getConnection(connectionUrl);
+			// ===
+			if (con.isClosed()) openConnection();
+			// <<<
+
+			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
+			ps = con.prepareStatement(sql);
+			ps.setInt(1, bucketIDconverted);
+			ps.setString(2, serialNumber);
+			ps.setString(3,  partNumber);
+
+
+			rs = ps.executeQuery();
+			if(rs.isBeforeFirst()) {
+				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
+
+				ps2 = con.prepareStatement(sqlDelete);
+				ps2.setInt(1, bucketIDconverted);
+				ps2.setString(2,  serialNumber);
+				ps2.setString(3,  partNumber);
+				ps2.executeUpdate();
+			}
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 
 		try{
 			db.collection("departments").document(department).collection("units").add(dd).get();
@@ -372,12 +493,113 @@ public class InventoryManagementApplication {
 			return "Unauthorized";
 		}
 
+<<<<<<< HEAD
 		Unit unit = unitData(unitID, departmentName, email);
 		if (unit == null) return "Implementation Error";
 
 		if (!unit.partNumbersAllowed.contains(partNumber)){
 			return "Part Number not allowed";
 		}
+=======
+	public List<String> addUser(String Email, String FirstName, String LastName, String Password, String Role, String Department) throws SQLException {
+		
+		List<String> depts = new ArrayList<String>();
+		Connection con = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		ResultSet rsQuery = null;
+		String sqlInsert = null;
+		PreparedStatement psInsert = null;
+		int recExists = 0;
+		String sql = null;
+		String userDept = null;
+		int deptExists = 0;
+		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		
+		try {
+			con = DriverManager.getConnection(connectionUrl);
+			stmt = con.createStatement();
+			String selectSql = "SELECT Email, FirstName, LastName, Password, Role FROM dbo.Login";
+			rsQuery = stmt.executeQuery(selectSql);
+			if (rsQuery != null) {
+				while(rsQuery.next()) {
+					if (rsQuery.getString("Email").contentEquals(Email))
+						recExists = 1;			
+				}
+			}else {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}
+			
+			if (recExists == 0) {
+				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
+						"values(?, ?, ?, ?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, FirstName);
+				psInsert.setString(3, LastName);
+				psInsert.setString(4, Password);
+				psInsert.setString(5, Role);
+				psInsert.executeUpdate();
+				
+				sqlInsert = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+				psInsert = con.prepareStatement(sqlInsert);
+				psInsert.setString(1, Email);
+				psInsert.setString(2, Department);
+				psInsert.executeUpdate();
+				depts.add(Department);
+				return depts;
+			}else{
+				sql = "select UserEmail, UserDepartment from dbo.UserDeptJunctionTable";
+				rs = stmt.executeQuery(sql);
+				if(rs != null) {
+					while(rs.next()) {
+						if (rs.getString("UserEmail").contentEquals(Email)) {
+							userDept = rs.getString("UserDepartment");
+							depts.add(userDept);
+							if (rs.getString("UserDepartment").contentEquals(Department)) {
+								deptExists = 1;
+							}
+						}
+						//System.out.println(rs.getString("UserDepartment"));
+					}
+					if (deptExists == 0) {
+						sql = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
+						psInsert = con.prepareStatement(sql);
+						psInsert.setString(1, Email);
+						psInsert.setString(2, Department);
+						psInsert.executeUpdate();
+						depts.add(Department);
+					}
+					//System.out.println(depts);
+					return depts;
+				}
+			}
+		}catch (SQLException e) {
+		}finally {
+			if(!con.isClosed()) {
+				con.close();
+			}
+		}
+		return depts;		
+	}
+	
+	public List<DashboardData> gatherDashboardData() throws SQLException {
+		// Connection con = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		PreparedStatement ps = null;
+		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 
 		for (Item item : unit.items){
 			if (item.getSerialNo().equals(serialNo)){

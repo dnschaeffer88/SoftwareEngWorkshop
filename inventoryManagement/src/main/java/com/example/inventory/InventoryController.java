@@ -201,6 +201,7 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/removePartsFromStorage")
 	@ResponseBody 
+<<<<<<< HEAD
 	public Map<String, String> removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
 
 		setHeaders(resp);
@@ -224,14 +225,37 @@ public class InventoryController {
 				return map;
 			}
 			map.put("errorMessage", result);
+=======
+	public HashMap<String, String> removePartsToStorage(HttpServletRequest request, HttpServletResponse resp, @RequestBody String payload) throws SQLException {
+		HashMap<String, String> removeResp = new HashMap<String, String>();
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			int bucketID = jsonNode.get("bucketID").asInt();
+			String partNumber = jsonNode.get("partNumber").asText();
+			String serialNumber = jsonNode.get("serialNumber").asText();
+
+			
+			boolean response = inventoryManagement.removePartsToStorage(bucketID, partNumber, serialNumber);
+			if(response == true) {
+			removeResp.put("success", "true");
+			} else {
+				removeResp.put("success", "false");
+			}
+			
+			return removeResp;
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 			map.put("errorMessage", "Incorrect request");
 		}
+<<<<<<< HEAD
 
 		map.put("success", "false");
 		return map;
+=======
+		return removeResp;
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 	}
 	
 	@RequestMapping(method=RequestMethod.POST, value = "/partSetUp")
@@ -273,6 +297,7 @@ public class InventoryController {
 		return map;
 	}
 	
+	
 	@RequestMapping(value = "/addPartsToStorage")
 	@ResponseBody
 	public Map<String, String> addPartsToStorage(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException{
@@ -284,6 +309,25 @@ public class InventoryController {
 
 		try {
 			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+<<<<<<< HEAD
+=======
+			String username = jsonNode.get("username").asText();
+			String csrf = jsonNode.get("csrf").asText();
+			String department = jsonNode.get("departmentId").asText();
+			String bucketName = jsonNode.get("bucketName").asText();
+			int bucketId = jsonNode.get("bucketId").asInt();
+			String type = jsonNode.get("type").asText();
+			int hasWeight = jsonNode.get("hasWeight").asInt(); // CHANGED TO BOOLEAN FROM INT -- SIAM
+			int serialNo = jsonNode.get("serialNo").asInt();
+			int partNo = jsonNode.get("partNo").asInt();
+			
+			// >>>>>> BEFORE
+			// int weight = jsonNode.get("weight").asInt();
+			// ======
+			int weight = 1;
+			if (hasWeight != 0) weight = jsonNode.get("weight").asInt();
+			// <<<<<<
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 
 			String departmentName = jsonNode.get("departmentName").asText(); // was department
 			String unitID = jsonNode.get("unitID").asText();
@@ -301,7 +345,12 @@ public class InventoryController {
 				addItemResp.put("success", "true");
 				return addItemResp;
 			}else{
+<<<<<<< HEAD
 				addItemResp.put("errorMessage", result);
+=======
+				Boolean responseAdd = inventoryManagement.addPartsToStorage(username, csrf, departmentId, bucketName, bucketId, type, hasWeight, serialNo, partNo, weight);
+				addItemResp.put("success", responseAdd.toString());
+>>>>>>> 7d6f150e1256b06b05161d3fac390d6ce69f31be
 			}
 			
 		} catch (IOException e) {
@@ -349,7 +398,32 @@ public class InventoryController {
 
 	}
 	
+	@RequestMapping(value = "/addUser")
+	@ResponseBody
+	public List<String> addUser(@RequestBody String payload) throws SQLException {
+		
+		List<String> napa = new ArrayList<String>();
+		
+		try {
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
 
+			String Password = jsonNode.get("Password").asText();
+			String Email = jsonNode.get("Email").asText();
+			String Role = jsonNode.get("Role").asText();
+			String FirstName = jsonNode.get("FirstName").asText();
+			String LastName = jsonNode.get("LastName").asText();
+			String Department = jsonNode.get("Department").asText();
+			
+			List<String> response = inventoryManagement.addUser(Email, FirstName, LastName, Password, Role, Department);
+			return response;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		//return false;
+		return napa;
+	}
+	
 	
 	@RequestMapping(value = "/dashboard")
 	@ResponseBody
