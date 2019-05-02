@@ -1,616 +1,428 @@
 package com.example.inventory;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.example.inventory.datamodels.DashboardData;
+import com.example.inventory.datamodels.Department;
+import com.example.inventory.datamodels.Item;
+import com.example.inventory.datamodels.PartNumber;
+import com.example.inventory.datamodels.Unit;
+import com.example.inventory.datamodels.User;
+import com.google.api.core.ApiFuture;
+import com.google.api.services.gmail.Gmail;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.EventListener;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FirestoreException;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.FirebaseOptions.Builder;
+import com.google.firebase.cloud.FirestoreClient;
+import com.google.gson.Gson;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @SpringBootApplication
 public class InventoryManagementApplication {
-	private static String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
 
-	private static Connection con = null;
+	private static Firestore db;
+	private static BCryptPasswordEncoder bpe = new BCryptPasswordEncoder();
+	private static HashMap<String, PartNumber> allParts = new HashMap<>();
+	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
 
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryManagementApplication.class, args);
 		openConnection();
+		// Gmail gmail = new Gma
 	}
 
-	private static void openConnection() /*throws SQLException*/{
+	private static void openConnection(){
+		try {
+			InputStream serviceAccount = new FileInputStream(
+					"./src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+			FirebaseOptions options = new Builder()
+				.setCredentials(credentials)
+				.setDatabaseUrl("https://pyrotask-bff53.firebaseio.com")
+				.build();
+			FirebaseApp.initializeApp(options);
+			db = FirestoreClient.getFirestore();
+			System.out.println("Connected to Firebase. Ready to handle requests");
+			getAllParts();
+
+		}catch(FileNotFoundException e){
+			e.printStackTrace();
+			System.out.println("FileException");
+			
+		}catch(IOException e){
+			e.printStackTrace();
+			System.out.println("IOExeption");
+		}
+	}
+
+	public User grabUser(String email){
 		try{
-			con = DriverManager.getConnection(connectionUrl);
+			User user = db.collection("users").document(email).get().get().toObject(User.class);
+			return user;
 		}catch(Exception e){
-			e.printStackTrace();;
-		}/*finally{
-			if (!con.isClosed()){
-				con.close();
-			}
-		}*/
-	}
-
-	public Boolean authenticateIntoApplication(String username, String password) throws SQLException  {
-		boolean authenticated = false;
-		//Connection con = null;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-				if (con.isClosed()) openConnection();
-			// <<<
-
-			String sql = "SELECT * FROM dbo.Login where UserName = ? and password = ?";
-			ps = con.prepareStatement(sql);
-			ps.setString(1, username);
-			ps.setString(2, password);
-
-			rs = ps.executeQuery();
-			if(rs != null) {
-				while(rs.next()) {
-					//Test
-					authenticated = true;
-					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
-				}
-
-			} 
-		} catch (SQLException e) {
-
 			e.printStackTrace();
-			authenticated = false;
-		} finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
-
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
-
-		}
-
-
-
-		return authenticated;
+			return null;
+		}	
+	}
+	public boolean userIsAdmin(String email){
+		User user = grabUser(email);
+		if (user.admin.size() > 0) return true;
+		return false;
 	}
 
-	public Boolean createDigitalStorageItem(String bucketName, String partNumbersAllowed, String department,
-			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
-
-		int bucketKey = 0;
-		// Connection con = null;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		//String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=?;user=?;password=?";
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
-			
-			String sql = "SELECT max(BucketID) as bucketId FROM dbo.Buckets";
-			Statement state = con.createStatement();
-			rs = state.executeQuery(sql);
-			while(rs.next()) {
-				bucketKey = rs.getInt("BucketId");
-			}
-			bucketKey++;
-
-			//insert new Storage item into the buckets table.
-			String insertSql = "insert into dbo.Buckets(BucketID, BucketName, PartNumbersAllowed, DepartmentID, UnitOfMeasurement, MaxMeasurement, Location) " +
-					"VALUES(?, ?, ?, ?, ?, ?, ?)";
-			ps = con.prepareStatement(insertSql);
-			ps.setInt(1, bucketKey);
-			ps.setString(2, bucketName);
-			ps.setString(3, partNumbersAllowed);
-			ps.setString(4, department);
-			ps.setString(5, unitOfMeasurement);
-			ps.setInt(6, maxMeasConverted);
-			ps.setString(7, location);
-
-			ps.executeUpdate();
-
-
-		} 
-		catch (SQLException e) {
-
+	private static void getAllParts(){
+		HashMap<String, PartNumber> hs = new HashMap<>();
+		try{
+			db.collection("parts").get().get().forEach(part -> {
+				PartNumber pn = part.toObject(PartNumber.class);
+				hs.put(pn.name, pn);
+			});
+		}catch(Exception e){
 			e.printStackTrace();
-			return false;
-		} 
-		finally {
-			
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
 		}
-
-		return true;
+		lock.writeLock().lock();
+		try{
+			allParts = hs;
+			System.out.println("Parts information received and parsed");
+		}finally{
+			lock.writeLock().unlock();
+		}
+		System.out.println("Done with parsing parts phase");
+		// getAllPartsSnapshot();
 	}
 
+	// private static void getAllPartsSnapshot(){
+	// 	af = db.collection("parts").get();
+	// 	db.collection("parts").addSnapshotListener(new EventListener<QuerySnapshot>(){
+		
+	// 		@Override
+	// 		public void onEvent(QuerySnapshot value, FirestoreException error) {
+	// 			if (error == null) return;
 
-	public boolean addPartsToStorage(String username, String csrf, String departmentId, String bucketName, int bucketId, String type, int hasWeight, int serialNo, int partNo, int weight) throws SQLException {
-		// TODO Auto-generated method stub
-		Connection con = null;
-		PreparedStatement ps = null;
-		PreparedStatement psInsert = null;
-		ResultSet rs = null;
-		ResultSet rs2 = null;
+	// 			HashMap<String, PartNumber> hs = new HashMap<>();
 
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+	// 			value.forEach(snap -> {
+	// 				PartNumber pn = snap.toObject(PartNumber.class);
+	// 				hs.put(pn.name, pn);
+	// 			});
 
-		try {
-			con = DriverManager.getConnection(connectionUrl);
-
-			String sql = "SELECT * FROM dbo.Items where Username = ? and CSRF = ? and DepartmentID = ? and BucketName = ? and BucketID = ? and Type = ? and HasWeight = ? and SerialNo = ? and PartNo = ? and Weight = ?";
-			ps = con.prepareStatement(sql);
-			//ps.setString(1, itemId);
-			ps.setString(1, username);
-			ps.setString(2, csrf);
-			ps.setString(3, departmentId);
-			ps.setString(4, bucketName);
-			ps.setInt(5, bucketId);
-			ps.setString(6, type);
-			ps.setInt(7, hasWeight);
-			ps.setInt(8, serialNo);
-			ps.setInt(9, partNo);
-			ps.setInt(10, weight);
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-				//while(rs.next()) {
-					return false;
-					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
-				//}
-
-			} else {
-				int itemID = 0;
-				
-				String sqlMaxID = "SELECT max(ItemID) as itemId FROM dbo.Items";
-				Statement state = con.createStatement();
-				rs2 = state.executeQuery(sqlMaxID);
-				if(rs2.isBeforeFirst()) {
-					while(rs2.next()) {
-						itemID = rs2.getInt("itemId");
-					}
-				}
-				itemID++;
-				String sqlInsert = "INSERT INTO dbo.Items(ItemID, Username, CSRF, DepartmentID, BucketName, BucketID, Type, HasWeight, SerialNo, PartNo, Weight) " + 
-						"values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setInt(1, itemID);
-				psInsert.setString(2, username);
-				psInsert.setString(3, csrf);
-				psInsert.setString(4, departmentId);
-				psInsert.setString(5, bucketName);
-				psInsert.setInt(6, bucketId);
-				psInsert.setString(7, type);
-				//psInsert.setBoolean(7, hasWeight);
-				if (hasWeight != 0)
-					psInsert.setInt(8, 1);
-				else
-					psInsert.setInt(8, 0);
-				psInsert.setInt(9, serialNo);
-				psInsert.setInt(10, partNo);
-				psInsert.setInt(11, weight);
-
-				psInsert.executeUpdate();
-			}
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			//partLoaded = false;
-			return false;
-		} finally {
-			if(!con.isClosed() && con != null) {
-				con.close();
-			}
-
-			if(!rs.isClosed() && rs != null) {
-				rs.close();
-			}
-
-			if(!ps.isClosed() && ps != null) {
-				ps.close();
-			}
-			/*
-			if(!psInsert.isClosed() && psInsert != null) {
-				psInsert.close();
-			}
-			if(!rs2.isClosed() && rs2 != null) {
-				rs2.close();
-			}
-		*/
-		}
-
-		return true;
-	}
+	// 			lock.writeLock().lock();
+	// 			try{
+	// 				allParts = hs;
+	// 				System.out.println("Parts information updated");
+	// 			}finally{
+	// 				lock.writeLock().unlock();
+	// 			}
+	// 			System.out.println("Done with parsing updated parts");
+	// 		}
+	// 	});
+		
+	// }
 	
-	public boolean removePartsToStorage(int bucketIDconverted, String partNumber, String serialNumber) throws SQLException {
-		// TODO Auto-generated method stub
-		// Connection con = null;
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		//Boolean partLoaded = false;
-		PreparedStatement ps2 = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
-
-			String sql = "SELECT * FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
-			ps = con.prepareStatement(sql);
-			ps.setInt(1, bucketIDconverted);
-			ps.setString(2, serialNumber);
-			ps.setString(3,  partNumber);
-
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-				String sqlDelete = "DELETE FROM dbo.Items where BucketID = ? and SerialNo = ? and PartNo = ?";
-
-				ps2 = con.prepareStatement(sqlDelete);
-				ps2.setInt(1, bucketIDconverted);
-				ps2.setString(2,  serialNumber);
-				ps2.setString(3,  partNumber);
-				ps2.executeUpdate();
+	public Boolean authenticateIntoApplication(String username, String password){
+		try{
+			System.out.println(username);
+			User user = db.collection("users").document(username).get().get().toObject(User.class);
+			
+			if (bpe.matches(password, user.passwordHashed)){
+				return true;
 			}
-
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-			//partLoaded = false;
 			return false;
-		} finally {
-		
-
-			if(!rs.isClosed()) {
-				rs.close();
-			}
-
-			if(!ps.isClosed()) {
-				ps.close();
-			}
-			/*
-			if(!ps2.isClosed()) {
-				ps2.close();
-			}
-			 */
+		}catch(Exception e){
+			e.printStackTrace();
+			return false;
 		}
-		return true;
 	}
 
-	public boolean setUpPartNumber(String partNumber, int trackByWeightConverted, double weightConverted) throws SQLException {
-		// TODO Auto-generated method stub
-		// Connection con = null;
-		PreparedStatement ps = null;
-		PreparedStatement psInsert = null;
-		ResultSet rs = null;
+	public String createDigitalStorageItem(String username,String bucketName, String partNumbersAllowed, String department,
+			String unitOfMeasurement, int maxMeasConverted, String location) throws SQLException {
+		System.out.println("UnitOfMeasurement:["+unitOfMeasurement+"]");
 
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
+		User user = grabUser(username);
+		if (!user.admin.contains(department)) return "You do not have the privilege for this action";
 
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
+		if (bucketName.equals("") || partNumbersAllowed.equals("") ||
+			department.equals("") || unitOfMeasurement.equals("") ||
+			bucketName.equals("null") || partNumbersAllowed.equals("null") ||
+			department.equals("null") || unitOfMeasurement.equals("null") ||
+			maxMeasConverted == 0 || location.equals("") || location.equals("null")) {
+				return "Empty fields encountered. All fields must be filled.";
+		}
+		String[] parts = partNumbersAllowed.replaceAll("[ ]+", "").split(",");
+		//Set<String> acceptedParts = parseAllParts();
 
-			String sql = "SELECT * FROM dbo.PartNumbers where PartNumber = ? and TrackByWeight = ? and Weight = ?";
-			ps = con.prepareStatement(sql);
-			ps.setString(1, partNumber);
-			ps.setInt(2, trackByWeightConverted);
-			ps.setDouble(3,  weightConverted);
-
-			rs = ps.executeQuery();
-			if(rs.isBeforeFirst()) {
-
-				return false;
-
-			} else {
-
-				String sqlInsert = "INSERT INTO dbo.PartNumbers(PartNumber, TrackByWeight, Weight) " + 
-						"values(?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setString(1, partNumber);
-				if (trackByWeightConverted != 0)
-					psInsert.setInt(2, 1);
-				else
-					psInsert.setInt(2, 0);
-				psInsert.setDouble(3, weightConverted);
-
-				psInsert.executeUpdate();
-
+		// Need to check if the unit of measurement.
+		for (String part: parts){
+			if (!allParts.containsKey(part)){
+				return "Part Number " + part + " doesn't match";
 			}
-		} catch (SQLException e) {
+			if (allParts.get(part).hasWeight != (unitOfMeasurement.equals("weight"))){
+				return "Part Number " + part + " doesn't match unit's measurement";
+			}
+		}
 
+		List<String> l = Arrays.asList(parts);
+
+		DashboardData dd = new DashboardData(department, bucketName, 
+			location, unitOfMeasurement, maxMeasConverted, (double)maxMeasConverted, l);
+
+		try{
+			db.collection("departments").document(department).collection("units").add(dd).get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Failed to add to the database.";
+		}
+		
+		return "success";
+	}
+
+	//TODO
+	public String removeDigitalStorageItem(String email, String departmentName, String unitID){
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName)){
+			return "Unauthorized";
+		}
+		try{
+			db.collection("departments").document(departmentName).collection("units").document(unitID).delete().get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error communicating with the database";
+		}
+		
+		return "success";
+	}
+
+	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
+		try{
+			PartNumber pm = new PartNumber(partNumber, trackByWeightConverted, weightConverted);
+			if (allParts.containsKey(partNumber)) return false;
+
+			db.collection("parts").document(partNumber).set(pm).get();
+			getAllParts();
+			
+		}catch(Exception e){
 			e.printStackTrace();
 			return false;
-
-		} finally {
-		
-
-			if(!rs.isClosed() && rs != null) {
-				rs.close();
-			}
-
-			if(!ps.isClosed() && ps != null) {
-				ps.close();
-			}
-			/*
-			if(!psInsert.isClosed() && psInsert != null) {
-				psInsert.close();
-			}
-			 */
 		}
 		return true;
 	}
 
 	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
-	public Unit unitData(int bucketID) throws SQLException{
-		
-		Unit unitObject = new Unit(false, null);
-		// Connection con = null;
-		Statement stmt = null;
-		ResultSet rs = null;
-		ResultSet rsConfirm = null;
-		//PreparedStatement ps = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-		
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
+	public Unit unitData(String unitID, String departmentName, String email){
+		try{
+			DocumentReference ref = db.collection("departments").document(departmentName);
+			
+			Department d = ref.get().get().toObject(Department.class);
+			if (!d.regulars.contains(email) && !d.admins.contains(email)) return null;
+	
+			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
+			List<Item> items = new ArrayList<>();
+			ref.collection("units").document(unitID).collection("items").get().get().forEach(itemSnap -> {
+				items.add(itemSnap.toObject(Item.class));
+			});
 
-			stmt = con.createStatement();
-			//System.out.println(bucketID);
-			String sqlConfirm = "select * from dbo.Buckets where UnitOfMeasurement = 'pounds' AND BucketID = '$[bucketID]'";
-			rsConfirm = stmt.executeQuery(sqlConfirm);
-			
-			if (rsConfirm != null) {
-				unitObject.setHasWeight(true);
-			}else {
-				unitObject.setHasWeight(false);
-				//return unitObject;
-			}
-			
-			List<Items> itemRecords = new ArrayList<Items>();
-			String sql = "select BucketID, SerialNo, PartNo, Weight from dbo.Items";
-			rs = stmt.executeQuery(sql);
-			if(rs != null) {
-				while(rs.next()) {
-					//if (rs.getString("BucketID").contentEquals(bucketID)) {
-					if (rs.getInt("BucketID") == bucketID) {
-						Items aRecord = new Items();	
-						
-						String partNo = rs.getString("PartNo");
-						String serialNo = rs.getString("SerialNo");
-						int weight = rs.getInt("Weight");
-						String department = rs.getString("DepartmentID");
-						int hasWeight = rs.getInt("HasWeight");
-						int unitId = rs.getInt("BucketID");
-						
-						aRecord.setPartNo(partNo);
-						aRecord.setSerialNo(serialNo);
-						aRecord.setWeight(Integer.toString(weight));
-						aRecord.setDepartment(department);
-						aRecord.setHasWeight(Integer.toString(hasWeight));
-						aRecord.setUnit(Integer.toString(unitId));
-						
-						
+			unit.items = items;
 
-						itemRecords.add(aRecord);
-					}
-					//System.out.println("PartNo: " + rs.getString("PartNo") + " SerialNo: " + rs.getString("SerialNo") + " Weight: " + rs.getInt("Weight"));
-				}
-				unitObject.setItems(itemRecords);
-			}
-			return unitObject;
-			
-		} catch (SQLException e) {
-		}finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
+			return unit;
+		}catch(Exception e){
+			e.printStackTrace();
+			return null;
 		}
-
-		return unitObject;
 }
 
-	public List<String> addUser(String Email, String FirstName, String LastName, String Password, String Role, String Department) throws SQLException {
-		
-		List<String> depts = new ArrayList<String>();
-		Connection con = null;
-		Statement stmt = null;
-		ResultSet rs = null;
-		ResultSet rsQuery = null;
-		String sqlInsert = null;
-		PreparedStatement psInsert = null;
-		int recExists = 0;
-		String sql = null;
-		String userDept = null;
-		int deptExists = 0;
-		String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-		
-		try {
-			con = DriverManager.getConnection(connectionUrl);
-			stmt = con.createStatement();
-			String selectSql = "SELECT Email, FirstName, LastName, Password, Role FROM dbo.Login";
-			rsQuery = stmt.executeQuery(selectSql);
-			if (rsQuery != null) {
-				while(rsQuery.next()) {
-					if (rsQuery.getString("Email").contentEquals(Email))
-						recExists = 1;			
+
+	public Map<String, String> gatherDashboardData(String email) {
+		User user = grabUser(email);
+		System.out.println(user.admin);
+
+		List<Department> admin = new ArrayList<>();
+		List<Department> regular = new ArrayList<>();
+		Map<String, String> map = new HashMap<>();
+		Gson gson = new Gson();
+
+
+		try{
+			user.admin.forEach((dept) -> {
+				try{
+					Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
+					ArrayList<DashboardData> data = new ArrayList<>();
+					db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
+						DashboardData dd = unit.toObject(DashboardData.class);
+						dd.setBucketId(unit.getId());
+						data.add(dd);
+					});
+	
+					d.units = data;
+					admin.add(d);
+				}catch(Exception e){
+					e.printStackTrace();
+					map.put("success", "false");
+					map.put("errorMessage", "Failed to parse Regular depts from database");
+					throw new NullPointerException();
 				}
-			}else {
-				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
-						"values(?, ?, ?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setString(1, Email);
-				psInsert.setString(2, FirstName);
-				psInsert.setString(3, LastName);
-				psInsert.setString(4, Password);
-				psInsert.setString(5, Role);
-				psInsert.executeUpdate();
-				depts.add(Department);
-				return depts;
+				
+			});
+	
+			user.regular.forEach((dept) -> {
+				try{
+					Department d = db.collection("departments").document(dept).get().get().toObject(Department.class);
+					ArrayList<DashboardData> data = new ArrayList<>();
+					db.collection("departments").document(dept).collection("units").get().get().getDocuments().forEach(unit -> {
+						DashboardData dd = unit.toObject(DashboardData.class);
+						dd.setBucketId(unit.getId());
+						data.add(dd);
+					});
+	
+					d.units = data;
+					regular.add(d);
+				}catch(Exception e){
+					e.printStackTrace();
+					map.put("success", "false");
+					map.put("errorMessage", "Failed to parse Regular depts from database");
+					throw new NullPointerException();
+				}
+				
+			});
+		}catch(NullPointerException e){
+			return map;
+		}
+
+		map.put("success", "true");
+		map.put("adminDepartments", gson.toJson(admin));
+		map.put("regularDepartments", gson.toJson(regular));
+
+		return map;
+	}
+
+	public void createQuickUser(String email, String pass){
+		User user = new User(email, bpe.encode(pass), "");
+		db.collection("users").document(email).set(user);
+	}
+
+	public String removePartsToStorage(String email, String departmentName, String unitID, String serialNo) {
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName) && !user.regular.contains(departmentName)){
+			return "Unauthorized";
+		}
+
+		Unit unit = unitData(unitID, departmentName, email);
+		if (unit == null) return "Implementation Error";
+		DocumentReference unitRef = db.collection("departments").document(departmentName).collection("units").document(unitID);
+
+		if (unit.hasWeight){
+			Item item = null;
+			try{
+				item = unitRef.collection("items").document("serialNo").get().get().toObject(Item.class);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+
+			unit.capacity -= item.getWeight();
+			try{
+				unitRef.set(unit);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+		}else{
+			unit.capacity -= 1;
+			try{
+				unitRef.set(unit);
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+		}
+		
+		try{
+			unitRef.collection("items").document(serialNo).delete().get();
+		}catch(Exception e){
+			return "FATAL: Capacity updated but item not removed";
+		}
+		return "success";
+	}
+
+	public String addPartsToStorage(String email, String departmentName, String unitID, String serialNo, String partNumber) {
+		User user = grabUser(email);
+		if (!user.admin.contains(departmentName) && !user.regular.contains(departmentName)){
+			return "Unauthorized";
+		}
+
+		Unit unit = unitData(unitID, departmentName, email);
+		if (unit == null) return "Implementation Error";
+
+		if (!unit.partNumbersAllowed.contains(partNumber)){
+			return "Part Number not allowed";
+		}
+
+		for (Item item : unit.items){
+			if (item.getSerialNo().equals(serialNo)){
+				return "Item with same serial number already exists";
+			}
+		}
+
+		if (!allParts.containsKey(partNumber)) return "Implementation Error";
+
+		PartNumber pn = allParts.get(partNumber);
+
+		Item item = new Item(partNumber, serialNo, unit.hasWeight? pn.weight: 0, departmentName, "whatever", unitID);
+		DocumentReference ref = db.collection("departments").document(departmentName).collection("units").document(unitID);
+
+		if(pn.hasWeight){
+			if (unit.capacity + pn.weight > unit.maxMeasurement) return "Not enough space";
+			try{
+				ref.collection("items").document(serialNo).set(item).get();
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
+			}
+			unit.capacity += pn.weight;
+			try{
+				ref.set(unit); // THIS MIGHT NOT WORK
+			}catch(Exception e){
+				return "FATAL: Was unable to update occupied space in the database";
 			}
 			
-			if (recExists == 0) {
-				sqlInsert = "INSERT INTO dbo.Login(Email, FirstName, LastName, Password, Role) " + 
-						"values(?, ?, ?, ?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setString(1, Email);
-				psInsert.setString(2, FirstName);
-				psInsert.setString(3, LastName);
-				psInsert.setString(4, Password);
-				psInsert.setString(5, Role);
-				psInsert.executeUpdate();
-				
-				sqlInsert = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
-				psInsert = con.prepareStatement(sqlInsert);
-				psInsert.setString(1, Email);
-				psInsert.setString(2, Department);
-				psInsert.executeUpdate();
-				depts.add(Department);
-				return depts;
-			}else{
-				sql = "select UserEmail, UserDepartment from dbo.UserDeptJunctionTable";
-				rs = stmt.executeQuery(sql);
-				if(rs != null) {
-					while(rs.next()) {
-						if (rs.getString("UserEmail").contentEquals(Email)) {
-							userDept = rs.getString("UserDepartment");
-							depts.add(userDept);
-							if (rs.getString("UserDepartment").contentEquals(Department)) {
-								deptExists = 1;
-							}
-						}
-						//System.out.println(rs.getString("UserDepartment"));
-					}
-					if (deptExists == 0) {
-						sql = "INSERT INTO dbo.UserDeptJunctionTable(UserEmail, UserDepartment) " + "values(?, ?)";
-						psInsert = con.prepareStatement(sql);
-						psInsert.setString(1, Email);
-						psInsert.setString(2, Department);
-						psInsert.executeUpdate();
-						depts.add(Department);
-					}
-					//System.out.println(depts);
-					return depts;
-				}
+		}else{
+			if (unit.capacity == unit.maxMeasurement) return "Not enough space";
+			try{
+				ref.collection("items").document(serialNo).set(item).get();
+			}catch(Exception e){
+				e.printStackTrace();
+				return "Error communicating with database";
 			}
-		}catch (SQLException e) {
-		}finally {
-			if(!con.isClosed()) {
-				con.close();
+			unit.capacity += 1;
+			try{
+				ref.set(unit); // THIS MIGHT NOT WORK
+			}catch(Exception e){
+				return "FATAL: Was unable to update occupied space in the database";
 			}
 		}
-		return depts;		
+		return "success";
 	}
-	
-	public List<DashboardData> gatherDashboardData() throws SQLException {
-		// Connection con = null;
-		Statement stmt = null;
-		ResultSet rs = null;
-		PreparedStatement ps = null;
-		// String connectionUrl = "jdbc:sqlserver://pyro-db.cc5cts2xsvng.us-east-2.rds.amazonaws.com:1433;databaseName=FuzzyDB;user=Fuzzies;password=abcdefg1234567";
-
-
-		List<DashboardData> dataList = new ArrayList<DashboardData>();
-
-		try {
-			// >>>
-			// con = DriverManager.getConnection(connectionUrl);
-			// ===
-			if (con.isClosed()) openConnection();
-			// <<<
-
-			String sql = "select BucketID, DepartmentID, BucketName, Location, UnitOfMeasurement, MaxMeasurement from dbo.buckets";
-			stmt = con.createStatement();
-
-			rs = stmt.executeQuery(sql);
-			if(rs != null) {
-				while(rs.next()) {
-					DashboardData dashboard = new DashboardData();	
-
-					int bucketId = rs.getInt("BucketID");
-					String departmentId = rs.getString("DepartmentID");
-					String bucketName = rs.getString("BucketName");
-					String location = rs.getString("Location");
-					String unitOfMeas = rs.getString("UnitOfMeasurement");
-					int maxMeasurement = rs.getInt("MaxMeasurement");
-
-					dashboard.setBucketId(bucketId);
-					dashboard.setDepartmentId(departmentId);
-					dashboard.setUnitName(bucketName);
-					dashboard.setLocation(location);
-					dashboard.setUnitOfMeasurement(unitOfMeas);
-					dashboard.setMaxMeasurement(maxMeasurement);
-
-					dataList.add(dashboard);
-
-					//	System.out.println("UserName: " + rs.getString("UserName") + " Password: " + rs.getString("Password") + " Admin: " + rs.getString("Admin"));
-				}
-				if(!dataList.isEmpty()) {
-					for(DashboardData dashboardItem : dataList) {
-						String sqlCapacity = "";
-						if(("pounds").equals(dashboardItem.getUnitOfMeasurement())) {	
-							sqlCapacity = "select sum(weight) as total from dbo.items where BucketID = ?";
-						} else {
-							sqlCapacity = "select count(*) as total from dbo.items where BucketID = ?";
-						}
-						ps = con.prepareStatement(sqlCapacity);
-						ps.setInt(1, dashboardItem.getUnitID());
-						rs = ps.executeQuery();
-						if(rs.isBeforeFirst()) {
-							while(rs.next()) {
-								int total = rs.getInt("total");
-								Double convTotal = Double.valueOf(total);
-								Double capacity = (convTotal/dashboardItem.getMaxMeasurement()) * 100.0;
-								dashboardItem.setCapacity(capacity);
-							}
-						}
-					}
-				}
-			} 
-		} catch (SQLException e) {
-
-
-		}
-		finally {
-			// if(!con.isClosed()) {
-			// 	con.close();
-			// }
-		}
-		return dataList;
-	}
-
-
 }
 

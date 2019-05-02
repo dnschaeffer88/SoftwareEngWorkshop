@@ -1,4 +1,6 @@
-package com.example.inventory;
+package com.example.inventory.datamodels;
+
+// THIS CLASS IS NOT USED ANYWHERE
 
 public class StorageUnit {
 
