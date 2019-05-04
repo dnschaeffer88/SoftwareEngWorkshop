@@ -481,6 +481,46 @@ public class InventoryController {
 		return map;
 	}
 
+	@RequestMapping("/removeUserAsRegular")
+	@ResponseBody
+	public Map<String, String> removeUserAsRegular(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		System.out.println("Call to /removeUserAsRegular");
+		Map<String, String> map = new HashMap<>();
+		
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String departmentName = jsonNode.get("departmentName").asText();
+			String removalEmail = jsonNode.get("emailToRemove").asText();
+			
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.removeRegularUser(email, departmentName, removalEmail);
+
+			if (resp.equals("success")){
+				map.put("success", "true");
+			} else { 
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+
+			return map;
+		}catch(IOException e){
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Unknown Error");
+		}
+		
+		map.put("success", "false");
+		return map;
+	}
+
 	@RequestMapping("/addUserAsAdmin")
 	@ResponseBody
 	public Map<String, String> addUserAsAdmin(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
