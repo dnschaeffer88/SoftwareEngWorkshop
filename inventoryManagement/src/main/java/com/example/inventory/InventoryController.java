@@ -422,7 +422,7 @@ public class InventoryController {
 			}
 
 			map.put("success", "true");
-			map.put("department", resp);
+			map.put("departments", resp);
 			return map;
 		}catch(IOException e){
 			e.printStackTrace();

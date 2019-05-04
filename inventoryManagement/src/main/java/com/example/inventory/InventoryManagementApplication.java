@@ -581,7 +581,7 @@ public class InventoryManagementApplication {
 	}
 
 	private boolean isSuperUser(String email){
-		// TODO 
+		if (email.equals("admin")) return true;
 		return false;
 	}
 
