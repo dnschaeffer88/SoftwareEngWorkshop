@@ -369,7 +369,7 @@ public class InventoryController {
 	
 	@RequestMapping(value = "/dashboard")
 	@ResponseBody
-	public Map<String, String> returnDashboard(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) throws SQLException {
+	public Map<String, String> returnDashboard(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
 		setHeaders(response);
 		System.out.println("Call to /dashboard");
 		HashMap<String, String> map = new HashMap<>();
@@ -396,6 +396,44 @@ public class InventoryController {
 			return map;
 		}
 		
+	}
+
+	@RequestMapping(value = "/manageUsers")
+	@ResponseBody
+	public Map<String, String> manageUsers(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload){
+		setHeaders(response);
+		System.out.println("Call to /manageUsers");
+		Map<String, String> map = new HashMap<>();
+
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null) {
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.getUsers(email);
+			if (resp.startsWith("Failed")){
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+				return map;
+			}
+
+			map.put("success", "true");
+			map.put("department", resp);
+			return map;
+		}catch(IOException e){
+			e.printStackTrace();
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Unknown Error");
+		}
+		
+		map.put("success", "false");
+		return map;
 	}
 
 	@RequestMapping("/addUserAsRegular")

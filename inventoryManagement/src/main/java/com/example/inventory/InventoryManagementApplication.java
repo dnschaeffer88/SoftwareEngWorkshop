@@ -57,8 +57,9 @@ public class InventoryManagementApplication {
 
 	private static void openConnection(){
 		try {
-			InputStream serviceAccount = new FileInputStream(
-					"./src/main/java/com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+			InputStream serviceAccount = (new InventoryManagementApplication()).getClass().getClassLoader().getResourceAsStream("pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");//new FileInputStream(
+					//"com/example/inventory/pyrotask-bff53-firebase-adminsdk-4ipf2-7026069435.json");
+					
 			GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
 			FirebaseOptions options = new Builder()
 				.setCredentials(credentials)
@@ -315,6 +316,25 @@ public class InventoryManagementApplication {
 		map.put("regularDepartments", gson.toJson(regular));
 
 		return map;
+	}
+
+	public String getUsers(String email){
+		User user = grabUser(email);
+		if (user == null) return "Failed: Failed to get user";
+
+		List<Department> depts = new ArrayList<>();
+
+		try{
+			for (String name: user.admin){
+				Department department = db.collection("departments").document(name).get().get().toObject(Department.class);
+				depts.add(department);
+			}
+		}catch(Exception e){
+			return "Failed: Error communicating with database";
+		}
+
+		Gson gson = new Gson();
+		return gson.toJson(depts);
 	}
 
 	public void createQuickUser(String email, String pass){
