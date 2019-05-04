@@ -559,6 +559,21 @@ public class InventoryManagementApplication {
 		}
 	}
 
+	public String changePass(String email, String oldPass, String newPass){
+		User user = grabUser(email);
+		if (user == null) return "Failed";
+		if (!bpe.matches(oldPass, user.passwordHashed)) return "Failed";
+
+		user.passwordHashed = bpe.encode(newPass);
+		try{
+			db.collection("users").document(email).set(user).get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error communicating with database";
+		}
+		return "success";
+	}
+
 
 	private String createUser(String email){
 		String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

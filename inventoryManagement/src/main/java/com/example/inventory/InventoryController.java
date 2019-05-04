@@ -1,16 +1,10 @@
 package com.example.inventory;
 
 import com.example.inventory.datamodels.Unit;
-import com.example.inventory.datamodels.Item;
-import com.example.inventory.datamodels.DashboardData;
-import com.example.inventory.datamodels.User;
-import com.example.inventory.datamodels.Department;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -601,6 +595,45 @@ public class InventoryController {
 			map.put("errorMessage", "Unknown Error");
 		}
 		
+		map.put("success", "false");
+		return map;
+	}
+
+	@RequestMapping("/changePassword")
+	@ResponseBody
+	public Map<String, String> changePassword(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		Map<String, String> map = new HashMap<>();
+
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String oldPass = jsonNode.get("oldPass").asText();
+			String newPass = jsonNode.get("newPass").asText();
+
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.changePass(email, oldPass, newPass);
+			if (resp.equals("success")){
+				map.put("success", "true");
+			}else{
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+			
+			return map;
+		}catch(IOException e){
+			e.printStackTrace();
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Invalid Request");
+		}
+
 		map.put("success", "false");
 		return map;
 	}
