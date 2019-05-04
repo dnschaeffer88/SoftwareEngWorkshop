@@ -79,7 +79,6 @@ public class InventoryController {
 			
 			Boolean authenticated = inventoryManagement.authenticateIntoApplication(username, password);
 
-			// >>>>> CSRF CODE HERE
 			if (authenticated){
 				HttpSession session = request.getSession();
 				String token = UUID.randomUUID().toString();
@@ -89,16 +88,22 @@ public class InventoryController {
 				session.setAttribute("username", username);
 				System.out.println(session.getAttribute("csrf"));
 				loginResp.put("csrf", token);
+				loginResp.put("success", "true");
+			}else{
+				loginResp.put("success", "false");
+				loginResp.put("errorMessage", "Authentication Failed");
 			}
-			// <<<<< CSRF CODE ENDS HERE
 			
-			loginResp.put("success", authenticated.toString());
 
-			return loginResp;
 		} catch (IOException e) {
 			e.printStackTrace();
+			loginResp.put("success", "false");
+			loginResp.put("errorMessage", "Invalid Request");
+		} catch (NullPointerException e){
+			loginResp.put("success", "false");
+			loginResp.put("errorMessage", "Invalid Request");
 		}
-		return null;
+		return loginResp;
 	}
 
 
@@ -139,7 +144,9 @@ public class InventoryController {
 
 			String username = checkAuthorizedAccess(request, jsonNode);
 			if (username == null){
-				// TODO
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized");
+				return map;
 			}
 
 
@@ -176,7 +183,9 @@ public class InventoryController {
 
 			String username = checkAuthorizedAccess(request, jsonNode);
 			if (username == null){
-				// TODO
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized");
+				return map;
 			}
 
 			
@@ -215,7 +224,9 @@ public class InventoryController {
 
 			String email = checkAuthorizedAccess(request, jsonNode);
 			if (email == null){
-				// TODO
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized");
+				return map;
 			}
 			
 			String result = inventoryManagement.removePartsToStorage(email, departmentName, unitID, serialNo);
@@ -252,23 +263,26 @@ public class InventoryController {
 
 			String email = checkAuthorizedAccess(request, jsonNode);
 			if (email == null){
-				// TODO 
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized");
+				return map;
 			}
 
 			if (inventoryManagement.userIsAdmin(email)){
-				Boolean resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
-				if (resp){
+				String resp = inventoryManagement.setUpPartNumber(partNumber, hasWeight, weight);
+				if (resp.equals("success")){
 					map.put("success", "true");
 				}
 				else{
 					map.put("success", "false");
-					map.put("errorMessage",/*TODO*/ "TODO");
+					map.put("errorMessage", resp);
 				}
 			}
 
 		} catch (IOException e) {
 			e.printStackTrace();
 			map.put("success", "false");
+			map.put("errorMessage", "Invalid Request");
 		}
 		return map;
 	}
@@ -292,7 +306,9 @@ public class InventoryController {
 
 			String email = checkAuthorizedAccess(request, jsonNode);
 			if (email == null) {
-				// TODO
+				addItemResp.put("success", "false");
+				addItemResp.put("errorMessage", "Unauthorized");
+				return addItemResp;
 			}
 
 			String result = inventoryManagement.addPartsToStorage(email, departmentName, unitID, serialNo, partNumber);
@@ -380,6 +396,135 @@ public class InventoryController {
 			return map;
 		}
 		
+	}
+
+	@RequestMapping("/addUserAsRegular")
+	@ResponseBody
+	public Map<String, String> addUserAsRegular(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		System.out.println("Call to /addUserAsRegular");
+		Map<String, String> map = new HashMap<>();
+		
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String departmentName = jsonNode.get("departmentName").asText();
+			String addingEmail = jsonNode.get("newUserEmail").asText();
+			
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.addRegularUserToDepartment(email, departmentName, addingEmail);
+
+			if (resp.startsWith("SUCCESS")){
+				map.put("success", "true");
+				map.put("userCreated", "true");
+				map.put("password", resp.substring("SUCCESS".length()));
+			} else if (resp.equals("Added Existing User")) {
+				map.put("success", "true");
+				map.put("userCreated", "false");
+			} else { 
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+
+			return map;
+		}catch(IOException e){
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Unknown Error");
+		}
+		
+		map.put("success", "false");
+		return map;
+	}
+
+	@RequestMapping("/addUserAsAdmin")
+	@ResponseBody
+	public Map<String, String> addUserAsAdmin(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		System.out.println("Call to /addUserAsAdmin");
+		Map<String, String> map = new HashMap<>();
+		
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String departmentName = jsonNode.get("departmentName").asText();
+			String addingEmail = jsonNode.get("newUserEmail").asText();
+			
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.addAdminUserToDepartment(email, departmentName, addingEmail);
+
+			if (resp.startsWith("SUCCESS")){
+				map.put("success", "true");
+				map.put("userCreated", "true");
+				map.put("password", resp.substring("SUCCESS".length()));
+			} else if (resp.equals("Added Existing User")) {
+				map.put("success", "true");
+				map.put("userCreated", "false");
+			} else { 
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+
+			return map;
+		}catch(IOException e){
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Unknown Error");
+		}
+		
+		map.put("success", "false");
+		return map;
+	}
+
+	@RequestMapping("/addDepartment")
+	@ResponseBody
+	public Map<String, String> addDepartment(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		System.out.println("Call to /addDepartment");
+		Map<String, String> map = new HashMap<>();
+		
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String departmentName = jsonNode.get("departmentName").asText();
+			
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.addDepartment(email, departmentName);
+
+			if (resp.equals("success")){
+				map.put("success", "true");
+			} else {
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+
+			return map;
+		}catch(IOException e){
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Unknown Error");
+		}
+		
+		map.put("success", "false");
+		return map;
 	}
 
 

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.example.inventory.datamodels.DashboardData;
@@ -199,8 +200,7 @@ public class InventoryManagementApplication {
 		return "success";
 	}
 
-	//TODO
-	public String removeDigitalStorageItem(String email, String departmentName, String unitID){
+ 	public String removeDigitalStorageItem(String email, String departmentName, String unitID){
 		User user = grabUser(email);
 		if (!user.admin.contains(departmentName)){
 			return "Unauthorized";
@@ -215,19 +215,19 @@ public class InventoryManagementApplication {
 		return "success";
 	}
 
-	public boolean setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
+	public String setUpPartNumber(String partNumber, boolean trackByWeightConverted, double weightConverted){
 		try{
 			PartNumber pm = new PartNumber(partNumber, trackByWeightConverted, weightConverted);
-			if (allParts.containsKey(partNumber)) return false;
+			if (allParts.containsKey(partNumber)) return "Part Number already exists";
 
 			db.collection("parts").document(partNumber).set(pm).get();
 			getAllParts();
 			
 		}catch(Exception e){
 			e.printStackTrace();
-			return false;
+			return "Error communicating with database";
 		}
-		return true;
+		return "success";
 	}
 
 	//curl -H "Content-Type: application/json" --data '{"BucketId":"testDept"}' http://localhost:8080/unit
@@ -424,5 +424,142 @@ public class InventoryManagementApplication {
 		}
 		return "success";
 	}
+
+
+	public String addRegularUserToDepartment(String email, String departmentName, String addingEmail) {
+		User user = grabUser(email);
+		if (user == null) return "Implementation Error";
+		if (!user.admin.contains(departmentName)) return "Unauthorized Action";
+		try{
+			Department department = db.collection("departments").document(departmentName).get().get().toObject(Department.class);
+			if (department.admins.contains(addingEmail) || department.regulars.contains(addingEmail)) return "User already in department";
+
+			// String password = createUser(addingEmail);
+			// if (password == null) throw new Exception();
+			User newUser = grabUser(addingEmail);
+			String password = null;
+			if (newUser == null){
+				password = createUser(addingEmail);
+				if (password == null) throw new Exception();
+				newUser = grabUser(addingEmail);
+			}
+
+			newUser.regular.add(departmentName);
+			department.regulars.add(addingEmail);
+
+			db.collection("departments").document(departmentName).set(department);
+			db.collection("users").document(addingEmail).set(newUser);
+			
+
+			if (password == null) return "Added Existing User";
+			return "SUCCESS" + password;
+
+		}catch(Exception e){
+			return "Error communicating with database";
+		}
+	}
+
+	public String removeRegularUser(String email, String departmentName, String removal){
+		User user = grabUser(email);
+		if (user == null) return "Implementation Error";
+		if (!user.admin.contains(departmentName)) return "Unauthorized Action";
+
+		try{
+			Department department = db.collection("departments").document(departmentName).get().get().toObject(Department.class);
+			if (!department.regulars.contains(removal)) return "Invalid request";
+			User remUser = grabUser(removal);
+			remUser.regular.remove(departmentName);
+			department.regulars.remove(removal);
+			db.collection("departments").document(departmentName).set(department).get();
+			db.collection("users").document(removal).set(remUser).get();
+			return "success";
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error communicating with database";
+		}
+	}
+
+	public String addAdminUserToDepartment(String email, String departmentName, String addingEmail) {
+		User user = grabUser(email);
+		if (user == null) return "Implementation Error";
+		if (!user.admin.contains(departmentName)) return "Unauthorized Action";
+		// if (!isSuperUser(email)) return "Unauthorized Action"
+
+		try{
+			Department department = db.collection("departments").document(departmentName).get().get().toObject(Department.class);
+			if (department.admins.contains(addingEmail)) return "Already an admin";
+
+			// String password = createUser(addingEmail);
+			// if (password == null) throw new Exception();
+			User newUser = grabUser(addingEmail);
+			String password = null;
+			if (newUser == null){
+				password = createUser(addingEmail);
+				if (password == null) throw new Exception();
+				newUser = grabUser(addingEmail);
+			}
+
+			newUser.admin.add(departmentName);
+			newUser.regular.remove(departmentName);
+			department.admins.add(addingEmail);
+			department.regulars.remove(addingEmail);
+
+			db.collection("departments").document(departmentName).set(department);
+			db.collection("users").document(addingEmail).set(newUser);
+			
+
+			if (password == null) return "Added Existing User";
+			return "SUCCESS" + password;
+
+		}catch(Exception e){
+			return "Error communicating with database";
+		}
+	}
+
+	public String addDepartment(String email, String departmentName){
+		if(!isSuperUser(email)) return "Unauthorized Action";
+		try{
+			if (db.collection("departments").document(departmentName).get().get().exists()){
+				return "Department with this name already exists";
+			}
+
+			Department department = new Department(departmentName, new ArrayList<>());
+			db.collection("departments").document(departmentName).set(department).get();
+			return "success";
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error Communicating with database";
+		}
+	}
+
+
+	private String createUser(String email){
+		String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		Random random = new Random();
+		StringBuilder pass = new StringBuilder();
+		for (int i = 0; i < 8; i++){
+			pass.append(alphabet.charAt(random.nextInt(alphabet.length())));
+		}
+
+		String password = pass.toString();
+		User user = new User(email, bpe.encode(password), "");
+		try{
+			db.collection("users").document(email).set(user).get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return null;
+		}
+		
+		return password;
+	}
+
+	private boolean isSuperUser(String email){
+		// TODO 
+		return false;
+	}
 }
+
+
+
+
 
