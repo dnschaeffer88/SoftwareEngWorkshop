@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.example.inventory.datamodels.DashboardData;
 import com.example.inventory.datamodels.Department;
@@ -47,6 +49,8 @@ public class InventoryManagementApplication {
 	private static BCryptPasswordEncoder bpe = new BCryptPasswordEncoder();
 	private static HashMap<String, PartNumber> allParts = new HashMap<>();
 	private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+	private static Pattern pattern = Pattern.compile("^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*"
+		+ "@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$");
 
 
 	public static void main(String[] args) {
@@ -447,6 +451,9 @@ public class InventoryManagementApplication {
 
 
 	public String addRegularUserToDepartment(String email, String departmentName, String addingEmail) {
+		if (notEmail(addingEmail)) return "Invalid address";
+
+
 		User user = grabUser(email);
 		if (user == null) return "Implementation Error";
 		if (!user.admin.contains(departmentName)) return "Unauthorized Action";
@@ -576,6 +583,12 @@ public class InventoryManagementApplication {
 	private boolean isSuperUser(String email){
 		// TODO 
 		return false;
+	}
+
+	private boolean notEmail(String email){
+		Matcher matcher = pattern.matcher(email);
+
+		return !matcher.matches();
 	}
 }
 
