@@ -638,6 +638,44 @@ public class InventoryController {
 		return map;
 	}
 
+	@RequestMapping("/changeName")
+	@ResponseBody
+	public Map<String, String> changeName(HttpServletRequest request, HttpServletResponse response, @RequestBody String payload) {
+		setHeaders(response);
+		Map<String, String> map = new HashMap<>();
+
+		try{
+			JsonNode jsonNode = new ObjectMapper().readTree(payload);
+			String newName = jsonNode.get("newName").asText();
+
+			String email = checkAuthorizedAccess(request, jsonNode);
+			if (email == null){
+				map.put("success", "false");
+				map.put("errorMessage", "Unauthorized Access");
+				return map;
+			}
+
+			String resp = inventoryManagement.changeName(email, newName);
+			if (resp.equals("success")){
+				map.put("success", "true");
+			}else{
+				map.put("success", "false");
+				map.put("errorMessage", resp);
+			}
+			
+			return map;
+		}catch(IOException e){
+			e.printStackTrace();
+			map.put("errorMessage", "Invalid Request");
+		}catch(Exception e){
+			e.printStackTrace();
+			map.put("errorMessage", "Invalid Request");
+		}
+
+		map.put("success", "false");
+		return map;
+	}
+
 
 	private void setHeaders(HttpServletResponse response){
 		response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");

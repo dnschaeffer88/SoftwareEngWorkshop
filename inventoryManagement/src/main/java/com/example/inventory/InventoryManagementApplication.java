@@ -1,12 +1,8 @@
 package com.example.inventory;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,14 +20,9 @@ import com.example.inventory.datamodels.Item;
 import com.example.inventory.datamodels.PartNumber;
 import com.example.inventory.datamodels.Unit;
 import com.example.inventory.datamodels.User;
-import com.google.api.core.ApiFuture;
-import com.google.api.services.gmail.Gmail;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.EventListener;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreException;
-import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.FirebaseOptions.Builder;
@@ -552,6 +543,9 @@ public class InventoryManagementApplication {
 
 			Department department = new Department(departmentName, new ArrayList<>());
 			db.collection("departments").document(departmentName).set(department).get();
+			User user = db.collection("users").document(email).get().get().toObject(User.class);
+			user.admin.add(departmentName);
+			db.collection("users").document(email).set(user);
 			return "success";
 		}catch(Exception e){
 			e.printStackTrace();
@@ -565,6 +559,19 @@ public class InventoryManagementApplication {
 		if (!bpe.matches(oldPass, user.passwordHashed)) return "Failed";
 
 		user.passwordHashed = bpe.encode(newPass);
+		try{
+			db.collection("users").document(email).set(user).get();
+		}catch(Exception e){
+			e.printStackTrace();
+			return "Error communicating with database";
+		}
+		return "success";
+	}
+
+	public String changeName(String email, String name){
+		User user = grabUser(email);
+		if (user == null) return "Failed";
+		user.name = name;
 		try{
 			db.collection("users").document(email).set(user).get();
 		}catch(Exception e){
