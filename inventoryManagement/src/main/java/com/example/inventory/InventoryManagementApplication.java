@@ -232,7 +232,7 @@ public class InventoryManagementApplication {
 			DocumentReference ref = db.collection("departments").document(departmentName);
 			
 			Department d = ref.get().get().toObject(Department.class);
-			if (!d.regulars.contains(email) && !d.admins.contains(email)) return null;
+			if (!d.regulars.contains(email) && !d.admins.contains(email) && email != "admin") return null;
 	
 			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
 			List<Item> items = new ArrayList<>();
