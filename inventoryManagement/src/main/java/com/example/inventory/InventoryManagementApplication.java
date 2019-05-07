@@ -237,6 +237,8 @@ public class InventoryManagementApplication {
 			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
 			List<Item> items = new ArrayList<>();
 			ref.collection("units").document(unitID).collection("items").get().get().forEach(itemSnap -> {
+				Item item = itemSnap.toObject(Item.class);
+				item.setWeight(allParts.get(item.getPartNo()).weight);
 				items.add(itemSnap.toObject(Item.class));
 			});
 
