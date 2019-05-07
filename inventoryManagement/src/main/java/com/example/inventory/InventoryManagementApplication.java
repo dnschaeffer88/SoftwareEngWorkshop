@@ -239,7 +239,7 @@ public class InventoryManagementApplication {
 			ref.collection("units").document(unitID).collection("items").get().get().forEach(itemSnap -> {
 				Item item = itemSnap.toObject(Item.class);
 				item.setWeight(allParts.get(item.getPartNo()).weight);
-				items.add(itemSnap.toObject(Item.class));
+				items.add(item);
 			});
 
 			unit.items = items;
