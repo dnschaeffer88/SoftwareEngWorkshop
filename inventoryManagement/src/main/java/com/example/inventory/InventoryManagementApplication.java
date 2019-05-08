@@ -535,6 +535,13 @@ public class InventoryManagementApplication {
 				newUser = grabUser(addingEmail);
 			}
 
+			if (department.admins == null){
+				department.admins = new ArrayList<>();
+			}
+			if (department.regulars == null){
+				department.regulars = new ArrayList<>();
+			}
+
 			newUser.admin.add(departmentName);
 			newUser.regular.remove(departmentName);
 			department.admins.add(addingEmail);
