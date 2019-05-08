@@ -480,6 +480,10 @@ public class InventoryManagementApplication {
 				newUser = grabUser(addingEmail);
 			}
 
+			if (department.regulars == null){
+				department.regulars = new ArrayList<>();
+			}
+
 			newUser.regular.add(departmentName);
 			department.regulars.add(addingEmail);
 
@@ -491,6 +495,7 @@ public class InventoryManagementApplication {
 			return "SUCCESS" + password;
 
 		}catch(Exception e){
+			e.printStackTrace();
 			return "Error communicating with database";
 		}
 	}
@@ -555,6 +560,7 @@ public class InventoryManagementApplication {
 			return "SUCCESS" + password;
 
 		}catch(Exception e){
+			e.printStackTrace();
 			return "Error communicating with database";
 		}
 	}
