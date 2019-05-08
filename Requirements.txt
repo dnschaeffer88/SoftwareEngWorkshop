@@ -1,0 +1,118 @@
+Description:
+
+The initial request for this came out of a meeting held on 11/5/2018 with Manager of Operations and Production Control.
+
+Production Control has developed an Excel spreadsheet to help manage explosive parts stored in lockers. 
+Currently a paper inventory is attached to the locker and people scribble notes to indicate what parts have been added to inventory or removed. 
+The spreadsheet developed by Production Control is an attempt at providing an electronic inventory management tool. 
+Manager of Operations is looking for IT to develop a solution that could use tablets or laptops to manage the inventory at the locker allowing them to see what is currently in the locker, what the total explosive weight is, etc. Manager of Operations has talked with other sites that could use the tool as well. 
+May want a dashboard showing 1 or more lockers and their status. Could have red/yellow/green thresholds for the explosive weight in each locker.
+
+This task is to investigate the requirements and provide an estimate to develop a system. 
+
+
+
+What is this table on the second tab show?
+	Do we need this?
+
+Will these tablets require login?
+	If not they will need validation each action.
+
+Do people only have users only have access to certain lockers or all lockers?  Per Locker? Track?
+
+Do we want new schema?  New security structure?  New part structure?
+
+
+Dashboard (Index page)
+	Shows table of all lockers
+	On click of row moves to a new screen that shows
+		Displays bootstrap progress bar showing the percentange full 
+		View that shows total inventory of parts
+			Ability Export inventory to pdf/excel?
+		View that shows transaction history
+			Ability to export to pdf/excel?
+		Button allowing add of parts.  
+			Pulls up screen to scan barcode or enter part number.
+			Allows input of quantity.
+			(Possibly needs user access validation)
+		Button allowing removal/add of parts.  
+			Pulls up screen to scan barcode or enter part number.
+			Allows input of quantity.
+			(Possibly needs user access validation)
+	
+84-152 hours
+
+New Project Creation - 4/12 Hours (4 if existing setup/12 if new project with entities built in)
+Security Screens - 12/40 (Create seperate security structure 12/Update existing security to be seperate application with flags seperating by program 40)
+If need of serialization - 32
+Create Table structure for lockers, parts, inventory etc. 16 hours
+Dashboard to show all lockers - 10 
+Table that shows current inventory - 6 
+Percentange weight - 6
+Transaction history - 6
+Ability to add and remove parts - 16
+Investigate Four winds implemetation/hardware security - 8
+
+Serialization?
+Where did that part table come from?
+
+
+	
+Administration 
+	Security 
+		ability to add users to system (Super user authority)
+	Locker
+		ability to add locker
+	Part
+		ability to add part
+		ability to print barcode (Needed?  ZPL?)
+		
+Tables
+	Security
+		Users
+			BEMSID
+			NAME
+		MM User Roles	
+		Roles
+			NAME
+			DESCRIPTION
+		MM Roles Authority
+		Authority
+			NAME
+			DESCRIPTION
+		MM Roles Area
+		Area
+			Track
+			Building
+		
+		Locker	
+			Location Code
+			Location NAME
+			Locker Type ID
+			Area ID
+			
+		Locker Type (Are all lockers the same?  May not be needed)
+			Max weight
+			Model
+		
+		Part
+			Part Number
+			Nomenclature
+			Weight
+			Explosive Weight
+			Haz Class
+			
+		Inventory
+			Part ID
+			Quantity
+			Serial Number (Needed?)
+			Lot Number?
+			BEMSID?
+		
+		Transaction
+			Part ID
+			Quantity
+			Serial number (Needed?)
+			Added Flag
+			BEMSID
+			Date
