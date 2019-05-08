@@ -20,7 +20,10 @@ public class Department{
     this.regulars = regulars;
   }
 
-  public Department(){}
+  public Department(){
+    this.admins = new ArrayList<>();
+    this.regulars = new ArrayList<>();
+  }
 
   /**
    * @return the name

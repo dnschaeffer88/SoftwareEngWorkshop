@@ -232,17 +232,17 @@ public class InventoryManagementApplication {
 			DocumentReference ref = db.collection("departments").document(departmentName);
 			
 			Department d = ref.get().get().toObject(Department.class);
-			if (email != "admin"){
-				if (d.admins == null && d.regulars == null) return null;
-				if (d.admins != null && d.regulars != null && !d.admins.contains(email) && !d.regulars.contains(email)) return null;
-				if (d.admins != null){
-					if (!d.admins.contains(email)) return null;
-				}
-				if (d.regulars != null){
-					if (!d.regulars.contains(email)) return null;
-				}
-			}
-			// if (!d.regulars.contains(email) && !d.admins.contains(email) && email != "admin") return null;
+			// if (email != "admin"){
+			// 	if (d.admins == null && d.regulars == null) return null;
+			// 	if (d.admins != null && d.regulars != null && !d.admins.contains(email) && !d.regulars.contains(email)) return null;
+			// 	if (d.admins != null){
+			// 		if (!d.admins.contains(email)) return null;
+			// 	}
+			// 	if (d.regulars != null){
+			// 		if (!d.regulars.contains(email)) return null;
+			// 	}
+			// }
+			if (!d.regulars.contains(email) && !d.admins.contains(email) && email != "admin") return null;
 	
 			Unit unit = ref.collection("units").document(unitID).get().get().toObject(Unit.class);
 			List<Item> items = new ArrayList<>();
