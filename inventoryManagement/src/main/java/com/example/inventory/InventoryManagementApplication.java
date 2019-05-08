@@ -334,6 +334,12 @@ public class InventoryManagementApplication {
 		try{
 			for (String name: user.admin){
 				Department department = db.collection("departments").document(name).get().get().toObject(Department.class);
+				if (department.regulars == null){
+					department.regulars = new ArrayList<>();
+				}
+				if (department.admins == null){
+					department.admins = new ArrayList<>();
+				}
 				depts.add(department);
 			}
 		}catch(Exception e){
